@@ -130,3 +130,5 @@ dmypy.json
 
 # HPC
 other/
+model_test.py
+data/
