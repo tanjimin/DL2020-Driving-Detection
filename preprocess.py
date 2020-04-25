@@ -168,7 +168,7 @@ def warpper(data):
     new_img[:, -256:, :] = img
     img = new_img
     img = cv2.resize(img, (3000, 3000))
-    value = np.sqrt(((img.shape[0]/2.0)**2.0)+((img.shape[1]/2.0)**2.0))
+
     polar_image = cv2.linearPolar(src=img, center=(1500, 1500), maxRadius=1500, flags=cv2.WARP_FILL_OUTLIERS + cv2.WARP_INVERSE_MAP)
     polar_image = polar_image.astype(np.uint8)
     
@@ -193,18 +193,18 @@ for _, _, road_img, filename, concat_width_img in trainloader:
     #     os.mkdir('/Users/leo/Downloads/polar/road_map')
     # if not os.path.exists('/Users/leo/Downloads/polar/polar_image'):
     #     os.mkdir('/Users/leo/Downloads/polar/polar_image')
-    check_path('/beegfs/cy1355/polar')
-    check_path('/beegfs/cy1355/polar/image_tensor')
-    check_path('/beegfs/cy1355/polar/road_map')
-    check_path('/beegfs/cy1355/polar/polar_image')
+    check_path('/beegfs/cy1355/polar_tensor')
+    check_path('/beegfs/cy1355/polar_tensor/polar_tensor')
+    check_path('/beegfs/cy1355/polar_tensor/road_map')
+    check_path('/beegfs/cy1355/polar_tensor/polar_image')
 
     assert road_img[0].shape == torch.Size([800, 800])
     assert output.shape == torch.Size([1, 256, 188, 188])
 
-    np.save(os.path.join('/beegfs/cy1355/polar/image_tensor', save_filename), output.detach().numpy())
-    np.save(os.path.join('/beegfs/cy1355/polar/road_map', save_filename), road_img[0].detach().numpy())  
+    np.save(os.path.join('/beegfs/cy1355/polar_tensor/polar_tensor', save_filename), output.detach().numpy())
+    np.save(os.path.join('/beegfs/cy1355/polar_tensor/road_map', save_filename), road_img[0].detach().numpy())  
     cv2_filename = save_filename + '.png'
-    cv2.imwrite(os.path.join('/beegfs/cy1355/polar/polar_image', cv2_filename), polar_image[...,::-1])
+    cv2.imwrite(os.path.join('/beegfs/cy1355/polar_tensor/polar_image', cv2_filename), polar_image[...,::-1])
     
     if cnt % 10 == 0:
         print(str(28 * 126 - cnt) + ' left')
