@@ -1,6 +1,9 @@
+import os
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import numpy as np
+from torch.utils.data import Dataset
 
 class LaneSegmentationDataset(Dataset):
     
@@ -10,12 +13,15 @@ class LaneSegmentationDataset(Dataset):
         self.data_names = sorted(os.listdir(data_dir))
 
     def __len__(self):
-        return len(self.file_names)
+        return len(self.data_names)
 
-    def __get_item__(self, idx):
-        data_path = os.path.join(data_dir, data_names[idx])
-        label_path = os.path.join(label_dir, data_names[idx])
-        data = np.read(data_path)
-        label = np.read(label_path)
+    def __getitem__(self, idx):
+        data_path = os.path.join(self.data_dir, self.data_names[idx])
+        label_path = os.path.join(self.label_dir, self.data_names[idx])
+        data = np.load(data_path)
+        label = np.load(label_path)
         return data, label
         
+dataset = LaneSegmentationDataset('/beegfs/cy1355/camera_tensor/image_tensor',
+'/beegfs/cy1355/camera_tensor/road_map')
+import pdb; pdb.set_trace()
