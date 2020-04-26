@@ -6,13 +6,14 @@ import torchvision
 import torchvision.transforms as transforms
 from train import epoch_loop 
 from data import LaneSegmentationDataset
-from model import FusionLayer, StaticModel
+from model import StaticPolarModel 
 
 # Setting initial parameters for training
 def set_flags(param):
     param['device'] = torch.device("cuda:0" if torch.cuda.is_available() 
                                             else "cpu")
     param['epochs'] = 500
+    param['run_name'] = 'polar'
 
 def main():
     param = {}
@@ -27,7 +28,7 @@ def init_loggers(param):
     pass
 
 def init_data(param):
-    trainset = LaneSegmentationDataset("/beegfs/cy1355/camera_tensor/image_tensor", "/beegfs/cy1355/camera_tensor/road_map")
+    trainset = LaneSegmentationDataset("/beegfs/cy1355/polar_tensor/image_tensor", "/beegfs/cy1355/polar_tensor/road_map")
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=16, 
                                               shuffle=True, 
@@ -35,13 +36,12 @@ def init_data(param):
     param['train_loader'] = trainloader
 
 def init_model(param):
-    fusion = FusionLayer().to(param['device'])
-    model = StaticModel().to(param['device'])
-    param['model'] = (fusion, model) 
+    model = StaticPolarModel().to(param['device'])
+    param['model'] = model
 
 def init_optimizers(param):
     criterion = nn.BCELoss()
-    parameters = list(param['model'][0].parameters()) + list(param['model'][1].parameters())
+    parameters = param['model'].parameters()
     optimizer = optim.SGD(parameters, lr=0.001, momentum=0.9)
     param['criterion'] = criterion
     param['optimizer'] = optimizer

@@ -13,6 +13,7 @@ def set_flags(param):
     param['device'] = torch.device("cuda:0" if torch.cuda.is_available() 
                                             else "cpu")
     param['epochs'] = 500
+    param['run_name'] = 'mosaic'
 
 def main():
     param = {}
