@@ -11,10 +11,15 @@ def epoch_loop(param):
             if not os.path.exists(save_path):
                 os.mkdir(save_path)
             else:
-                torch.save(param['model'][0], 
-                           '{}/fusion_{}'.format(save_path, epoch))
-                torch.save(param['model'][1], 
-                           '{}/static_{}'.format(save_path, epoch))
+                if param['run_name'] == 'mosaic':
+                    torch.save(param['model'][0], 
+                            '{}/fusion_{}'.format(save_path, epoch))
+                    torch.save(param['model'][1], 
+                            '{}/static_{}'.format(save_path, epoch))
+                elif param['run_name'] == 'polar':
+                    torch.save(param['model'], 
+                            '{}/static_polar_{}'.format(save_path, epoch))
+
 
 def batch_loop(epoch, param):
     param['running_loss'] = 0.0 
