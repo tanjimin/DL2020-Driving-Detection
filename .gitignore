@@ -132,3 +132,5 @@ dmypy.json
 other/
 model_test.py
 data/
+saves*
+sample_output*

@@ -19,9 +19,6 @@ class LaneSegmentationDataset(Dataset):
         data_path = os.path.join(self.data_dir, self.data_names[idx])
         label_path = os.path.join(self.label_dir, self.data_names[idx])
         data = np.load(data_path)
-        label = np.load(label_path)
+        label = (np.load(label_path) * 1).astype(np.single)
         return data, label
         
-dataset = LaneSegmentationDataset('/beegfs/cy1355/camera_tensor/image_tensor',
-'/beegfs/cy1355/camera_tensor/road_map')
-import pdb; pdb.set_trace()
