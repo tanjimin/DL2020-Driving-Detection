@@ -6,6 +6,8 @@ import torchvision
 import cv2
 import numpy as np
 
+cuda = torch.cuda.is_available()
+device = torch.device("cuda:0" if cuda else "cpu")
 
 def reorder_tensor(tensor):
     '''
@@ -102,13 +104,49 @@ def polar_preprocess(batch_sample, reshape_size = 3000):
         
     return output_tensor
 
+def backbone_pretrain(device, batch_sample, is_camera = True):
+
+    pretrained_model = torchvision.models.resnet18(pretrained = True)
+    modules = list(pretrained_model.children())[:-3]
+    res_model = nn.Sequential(*modules)
+    res_model.eval()
+
+    if is_camera:
+        # 5D tensor [batch, camera, C, H, W]
+        camera_after_bb_list = []
+        for i in range(batch_sample.shape[0]):
+            camera_after_bb_ = res_model(batch_sample[i,:])
+            # torch.Size([6, 256, 16, 20])
+            print(camera_after_bb_.shape)
+            camera_after_bb_list.append(camera_after_bb_)
+            
+        camera_after_bb = torch.stack(camera_after_bb_list, dim = 0)
+        return camera_after_bb
+
+    else:
+        polar_after_bb = res_model(batch_sample)
+        return polar_after_bb
+
+    
+
+
 
 if __name__ == "__main__":
+    
     # [batch_size, 6(images per sample), 3, H, W]
-    batch_sample = torch.rand((8, 6, 3, 256, 306))
+    batch_sample = torch.rand((2, 6, 3, 256, 306))
+
     camera_out = camera_preprocess(batch_sample)
     # (8, 6, 3, 256, 306)
     print(camera_out.shape)
+    
     polar_out = polar_preprocess(batch_sample)
     # [8, 3, 3000, 3000]
     print(polar_out.shape)
+
+    after_bb_tensor = backbone_pretrain(device, batch_sample, is_camera = True)
+
+    # camera: torch.Size([2, 6, 256, 16, 20])
+    # polar: torch.Size([8, 256, 188, 188])
+    print(after_bb_tensor.shape)
+    
