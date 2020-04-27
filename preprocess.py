@@ -18,6 +18,9 @@ device = torch.device("cuda:0" if cuda else "cpu")
 image_folder = '/beegfs/cy1355/data'
 annotation_csv = '/beegfs/cy1355/data/annotation.csv'
 
+# image_folder = './data'
+# annotation_csv = './data/annotation.csv'
+
 unlabeled_scene_index = np.arange(106)
 labeled_scene_index = np.arange(106, 134)
 
@@ -132,10 +135,12 @@ res_model.to(device)
 
 ##########################################################
 # save camera-level tensor
+# input shape: [6, 3, 256, 306]
 # output shape: [6, 256, 16, 20]
 ##########################################################
 # cnt = 0
-# for data, _, road_img, filename in trainloader:
+# for data, _, road_img, filename, _ in trainloader:
+#     import pdb;pdb.set_trace()
 
 #     output = res_model(data[0])
 #     save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
@@ -158,6 +163,7 @@ res_model.to(device)
 
 ##########################################################
 # save polar image
+# output shape: [256, 188, 188]
 ##########################################################
 
 def warpper(data):
@@ -187,27 +193,25 @@ cnt = 0
 for _, _, road_img, filename, concat_width_img in trainloader:
 
     polar_image = warpper(concat_width_img)
+    polar_image = np.rot90(np.rot90(np.rot90(np.fliplr(polar_image))))
 
     input_res = torch.Tensor(polar_image / 255).unsqueeze(0).permute(0,3,1,2) 
+    # input_res ([1, 3, 3000, 3000])
     input_res = input_res.to(device)
     output = res_model(input_res)
-    save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
     
-    # if not os.path.exists('/Users/leo/Downloads/polar/image_tensor'):
-    #     os.mkdir('/Users/leo/Downloads/polar/image_tensor')
-    # if not os.path.exists('/Users/leo/Downloads/polar/road_map'):
-    #     os.mkdir('/Users/leo/Downloads/polar/road_map')
-    # if not os.path.exists('/Users/leo/Downloads/polar/polar_image'):
-    #     os.mkdir('/Users/leo/Downloads/polar/polar_image')
+    save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
+    output = output.squeeze(0)
+    
     check_path('/beegfs/cy1355/polar_tensor')
-    check_path('/beegfs/cy1355/polar_tensor/polar_tensor')
+    check_path('/beegfs/cy1355/polar_tensor/image_tensor')
     check_path('/beegfs/cy1355/polar_tensor/road_map')
     check_path('/beegfs/cy1355/polar_tensor/polar_image')
 
     assert road_img[0].shape == torch.Size([800, 800])
-    assert output.shape == torch.Size([1, 256, 188, 188])
+    assert output.shape == torch.Size([256, 188, 188])
 
-    np.save(os.path.join('/beegfs/cy1355/polar_tensor/polar_tensor', save_filename), output.detach().cpu().numpy())
+    np.save(os.path.join('/beegfs/cy1355/polar_tensor/image_tensor', save_filename), output.detach().cpu().numpy())
     np.save(os.path.join('/beegfs/cy1355/polar_tensor/road_map', save_filename), road_img[0].detach().numpy())  
     cv2_filename = save_filename + '.png'
     cv2.imwrite(os.path.join('/beegfs/cy1355/polar_tensor/polar_image', cv2_filename), polar_image[...,::-1])
