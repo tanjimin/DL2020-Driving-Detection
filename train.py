@@ -17,7 +17,7 @@ def epoch_loop(param):
                             '{}/fusion_{}'.format(save_path, epoch))
                     torch.save(param['model'][1], 
                             '{}/static_{}'.format(save_path, epoch))
-                elif param['run_name'] == 'polar':
+                elif param['run_name'] in ['polar', 'front']:
                     torch.save(param['model'], 
                             '{}/static_polar_{}'.format(save_path, epoch))
 
@@ -37,7 +37,7 @@ def train(epoch, batch_i, batch, param):
         static_model = param['model'][1].train()
         fusion_outputs = fusion_layer(inputs)
         outputs = static_model(fusion_outputs).squeeze(1)
-    elif param['run_name'] == 'polar':
+    elif param['run_name'] in ['polar', 'front']:
         static_polar = param['model'].train()
         outputs = static_polar(inputs.squeeze(1)).squeeze(1)
     loss = param['criterion'](outputs, labels)
@@ -75,7 +75,7 @@ def validation(epoch, batch_i, batch, param):
             static_model = param['model'][1].eval()
             fusion_outputs = fusion_layer(inputs)
             outputs = static_model(fusion_outputs).squeeze(1)
-        elif param['run_name'] == 'polar':
+        elif param['run_name'] in ['polar', 'front']:
             static_polar = param['model'].eval()
             outputs = static_polar(inputs.squeeze(1)).squeeze(1)
         loss = param['criterion'](outputs, labels)
