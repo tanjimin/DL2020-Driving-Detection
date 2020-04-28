@@ -104,19 +104,65 @@ class StaticPolarModel(nn.Module):
         out = self.deconv4(out)
         return out
 
+
+class FrontStaticModel(nn.Module):
+    def __init__(self):
+        super(FrontStaticModel, self).__init__()
+
+        self.deconv1 = nn.Sequential(
+                        nn.ConvTranspose2d(256, 64, 4, 2, 0),
+                        nn.BatchNorm2d(64),
+                        nn.ReLU())
+
+        self.deconv2 = nn.Sequential(
+                        nn.ConvTranspose2d(64, 16, 6, 2, (1,0)),
+                        nn.BatchNorm2d(16),
+                        nn.ReLU())
+
+        self.deconv3 = nn.Sequential(
+                        nn.ConvTranspose2d(16, 4, 6, 3, (5,0)),
+                        nn.BatchNorm2d(4),
+                        nn.ReLU())
+        
+        self.deconv4 = nn.Sequential(
+                        nn.ConvTranspose2d(4, 1, 6, 2, (5,0)),
+                        nn.Sigmoid()
+                        )
+
+
+    def forward(self, inputs):
+        """
+        Inputs:
+            inputs: batch * C * H * W. currently 6 * 256 * 16 * 20
+        Outputs:
+            out: batch * 1 * 400 * 538
+        """
+        
+        out = self.deconv1(inputs)
+        out = self.deconv2(out)
+        out = self.deconv3(out)
+        out = self.deconv4(out)
+        return out
+
 if __name__ == "__main__":
-    inputs = torch.rand((8, 6, 256, 16, 20))
+    # inputs = torch.rand((8, 6, 256, 16, 20))
 
-    fusion = FusionLayer().eval()
-    static = StaticModel().eval()
-    with torch.no_grad():
-        out1 = fusion(inputs)
-        print(out1.shape) # 8, 256, 48, 40
-        out2 = static(out1)
-        print(out2.shape)
+    # fusion = FusionLayer().eval()
+    # static = StaticModel().eval()
+    # with torch.no_grad():
+    #     out1 = fusion(inputs)
+    #     print(out1.shape) # 8, 256, 48, 40
+    #     out2 = static(out1)
+    #     print(out2.shape)
 
-    inputs2 = torch.rand((8, 256, 188, 188))
-    staticpolar = StaticPolarModel().eval()
+    # inputs2 = torch.rand((8, 256, 188, 188))
+    # staticpolar = StaticPolarModel().eval()
+    # with torch.no_grad():
+    #     out3 = staticpolar(inputs2)
+    #     print(out3.shape) 
+
+    inputs3 = torch.rand((8, 256, 16, 20))
+    frontStatic = FrontStaticModel().eval()
     with torch.no_grad():
-        out3 = staticpolar(inputs2)
-        print(out3.shape) 
+        out4 = frontStatic(inputs3)
+        print(out4.shape) 
