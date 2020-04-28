@@ -134,3 +134,4 @@ model_test.py
 data/
 saves*
 sample_output*
+.DS_Store
