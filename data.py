@@ -37,7 +37,6 @@ class Front_LaneSegmentationDataset(Dataset):
     def __getitem__(self, idx):
         data_path = os.path.join(self.data_dir, self.data_names[idx])
         label_path = os.path.join(self.label_dir, self.data_names[idx])
-        print(label_path)
         data = np.load(data_path)
         label = (np.load(label_path) * 1).astype(np.single)
         
