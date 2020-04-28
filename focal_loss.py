@@ -4,7 +4,7 @@ def focal_loss(y_pred, y_true, alpha = 0.25, gamma = 2):
 	'''
 	focal_loss = -alpha * (1 - pt) ^ gamma * log(pt)
 
-	y_pred/y_true: [batch, H, W] (binary)
+	y_pred/y_true: [batch, H, W]
 	'''
 
 	y_pred = y_pred.reshape(y_pred.shape[0], -1)
