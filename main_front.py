@@ -35,7 +35,7 @@ def init_data(param):
                                               num_workers=0)
     param['train_loader'] = trainloader
 
-    validationset = FrontLaneSegmentationDataset("/beegfs/cy1355/polar_tensor_val/image_tensor", "/beegfs/cy1355/polar_tensor_val/road_map")
+    validationset = FrontLaneSegmentationDataset("/beegfs/cy1355/camera_tensor_val/image_tensor", "/beegfs/cy1355/camera_tensor_val/road_map")
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=16, 
                                               shuffle=True, 
