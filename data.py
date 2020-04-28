@@ -63,6 +63,11 @@ class FrontObjectSegmentationDataset(Dataset):
 
     ################################################################################
     def retrieve_grid_poly_pair(self, target_bbox):
+        '''
+        retrieve list of grids to be searched and list of polygon objects
+        only return grids in the outer polygon of each bbox
+        '''
+
         polygon_list = []
         search_grid_list = []
         for i, bb in enumerate(target_bbox):
@@ -134,7 +139,7 @@ class FrontObjectSegmentationDataset(Dataset):
         # out_binary_bbox_map: (800, 800)
         # data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
         # label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
-        
+
         label = torch.from_numpy(np.rot90(out_binary_bbox_map[131:669,400:]).copy())
 
         return data[1,:], label
