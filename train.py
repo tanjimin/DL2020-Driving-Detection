@@ -37,9 +37,12 @@ def train(epoch, batch_i, batch, param):
         static_model = param['model'][1].train()
         fusion_outputs = fusion_layer(inputs)
         outputs = static_model(fusion_outputs).squeeze(1)
-    elif param['run_name'] in ['polar', 'front']:
+    elif param['run_name'] == 'polar':
         static_polar = param['model'].train()
         outputs = static_polar(inputs.squeeze(1)).squeeze(1)
+    elif param['run_name'] == 'front':
+        static_front = param['model'].train()
+        outputs = static_front(inputs)
     loss = param['criterion'](outputs, labels)
     loss.backward()
     param['optimizer'].step()
@@ -75,9 +78,12 @@ def validation(epoch, batch_i, batch, param):
             static_model = param['model'][1].eval()
             fusion_outputs = fusion_layer(inputs)
             outputs = static_model(fusion_outputs).squeeze(1)
-        elif param['run_name'] in ['polar', 'front']:
+        elif param['run_name'] == 'polar':
             static_polar = param['model'].eval()
             outputs = static_polar(inputs.squeeze(1)).squeeze(1)
+        elif param['run_name'] == 'front':
+            static_front = param['model'].eval()
+            outputs = static_front(inputs)
         loss = param['criterion'](outputs, labels)
         param['running_loss'] += loss.item()
 
