@@ -5,8 +5,8 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from train import epoch_loop 
-from data import LaneSegmentationDataset
-from model import StaticPolarModel 
+from data import FrontLaneSegmentationDataset
+from model import FrontStaticModel 
 
 # Setting initial parameters for training
 def set_flags(param):
@@ -28,21 +28,21 @@ def init_loggers(param):
     pass
 
 def init_data(param):
-    trainset = LaneSegmentationDataset("/beegfs/cy1355/camera_tensor_train/image_tensor", "/beegfs/cy1355/camera_tensor_train/road_map")
+    trainset = FrontLaneSegmentationDataset("/beegfs/cy1355/camera_tensor_train/image_tensor", "/beegfs/cy1355/camera_tensor_train/road_map")
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=16, 
                                               shuffle=True, 
                                               num_workers=0)
     param['train_loader'] = trainloader
 
-    validationset = LaneSegmentationDataset("/beegfs/cy1355/polar_tensor_val/image_tensor", "/beegfs/cy1355/polar_tensor_val/road_map")
+    validationset = FrontLaneSegmentationDataset("/beegfs/cy1355/polar_tensor_val/image_tensor", "/beegfs/cy1355/polar_tensor_val/road_map")
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=16, 
                                               shuffle=True, 
                                               num_workers=0)
     param['validation_loader'] = validationloader
 def init_model(param):
-    model = StaticPolarModel().to(param['device'])
+    model = FrontStaticModel().to(param['device'])
     param['model'] = model
 
 def init_optimizers(param):

@@ -24,7 +24,7 @@ class LaneSegmentationDataset(Dataset):
         
 
 
-class Front_LaneSegmentationDataset(Dataset):
+class FrontLaneSegmentationDataset(Dataset):
     
     def __init__(self, data_dir, label_dir):
         self.data_dir = data_dir
