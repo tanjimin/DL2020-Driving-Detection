@@ -32,14 +32,14 @@ def init_data(param):
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=16, 
                                               shuffle=True, 
-                                              num_workers=2)
+                                              num_workers=0)
     param['train_loader'] = trainloader
 
     validationset = LaneSegmentationDataset("/beegfs/cy1355/polar_tensor_val/image_tensor", "/beegfs/cy1355/polar_tensor_val/road_map")
-    trainloader = torch.utils.data.DataLoader(validationset, 
+    validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=16, 
                                               shuffle=True, 
-                                              num_workers=2)
+                                              num_workers=0)
     param['validation_loader'] = validationloader
 def init_model(param):
     model = StaticPolarModel().to(param['device'])

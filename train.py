@@ -7,6 +7,7 @@ def epoch_loop(param):
     for epoch in range(param['epochs']):
         train_loop(epoch, param) 
         if epoch % 10 == 0:
+            validation_loop(epoch, param)
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
                 os.mkdir(save_path)
