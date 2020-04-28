@@ -1,6 +1,6 @@
 import torch
 
-def focal_loss(y_pred, y_true, alpha = 0.25, gamma = 2):
+def focal_loss(y_pred, y_true, alpha = 0.25, gamma = 2, reduction = 'mean'):
 	'''
 	focal_loss = -alpha * (1 - pt) ^ gamma * log(pt)
 
@@ -12,7 +12,12 @@ def focal_loss(y_pred, y_true, alpha = 0.25, gamma = 2):
 
 	pt = y_true * y_pred + (1 - y_true) * (1 - y_pred)
 
-	focal_loss = torch.sum(-alpha * (1 - pt) ** gamma * torch.log(pt))
+	if reduction == 'sum':
+		focal_loss = torch.sum(-alpha * (1 - pt) ** gamma * torch.log(pt))
+	elif reduction == 'mean':
+		focal_loss = torch.mean(-alpha * (1 - pt) ** gamma * torch.log(pt))
+	else:
+		raise Error('Wrong reduction defined for focal loss')
 
 	return focal_loss
 
