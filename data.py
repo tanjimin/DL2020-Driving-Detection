@@ -97,12 +97,12 @@ class CameraBasedLaneSegmentationDataset(Dataset):
         label1 = label_rot1[547 - 400:547, 278: 278 + 538].copy()
         label4 = label_rot1[547:547+400, 278: 278 + 538][::-1,::-1].copy()
 
-        label_rot2 = ndimage.rotate(img, -30)
+        label_rot2 = ndimage.rotate(label, -30)
         label3 = label_rot2[547-400:547, 278: 278 + 538 ].copy()
         label6 = label_rot2[547:547+400, 278: 278 + 538 ][::-1,::-1].copy()
 
         label2 = np.rot90(label[131:669,400:]).copy()
-        label4 = np.rot90(label[131:669, :400][::-1,::-1]).copy()
+        label5 = np.rot90(label[131:669, :400][::-1,::-1]).copy()
 
         label_processed = torch.from_numpy(np.stack([label1, label2, label3, label4, label5, label6], axis = 0))
         return data, label_processed
