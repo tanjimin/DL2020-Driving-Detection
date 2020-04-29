@@ -242,7 +242,7 @@ for _, target, _, filename, _ in trainloader:
     np.save(os.path.join('/beegfs/cy1355/obj_binary_roadmap/road_map', save_filename), binary_roadmap_objdetect)
 
     cv2_filename = save_filename + '.png'
-    cv2.imwrite(os.path.join('/beegfs/cy1355/obj_binary_roadmap/roadmap_image', cv2_filename), binary_roadmap_objdetect[...,::-1]*255)
+    cv2.imwrite(os.path.join('/beegfs/cy1355/obj_binary_roadmap/roadmap_image', cv2_filename), binary_roadmap_objdetect*255)
 
     
     if cnt % 10 == 0:
