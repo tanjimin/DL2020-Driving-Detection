@@ -236,15 +236,17 @@ for _, target, _, filename, _ in trainloader:
     binary_roadmap_objdetect = main_binary_roadmap_objdetection(target_bbox)
 
     save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
+
     assert binary_roadmap_objdetect.shape == (800, 800)
 
     np.save(os.path.join('/beegfs/cy1355/obj_binary_roadmap/road_map', save_filename), binary_roadmap_objdetect)
 
     cv2_filename = save_filename + '.png'
     cv2.imwrite(os.path.join('/beegfs/cy1355/obj_binary_roadmap/roadmap_image', cv2_filename), binary_roadmap_objdetect[...,::-1]*255)
+
     
     if cnt % 10 == 0:
-        print(str(28 * 126 - cnt) + ' left!')
+        print(str(28 * 126 - cnt) + ' left')
     cnt += 1
 
 
