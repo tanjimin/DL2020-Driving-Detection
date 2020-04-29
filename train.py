@@ -3,6 +3,10 @@ import cv2
 import torch
 from tqdm import tqdm
 
+import sys
+sys.path.append('test')
+from helper import compute_ts_road_map
+
 def epoch_loop(param):
     for epoch in range(param['epochs']):
         train_loop(epoch, param) 
@@ -76,7 +80,6 @@ def validation(epoch, batch_i, batch, param):
         inputs, labels = batch 
         inputs = inputs.to(param['device'])
         labels = labels.to(param['device'])
-        param['optimizer'].zero_grad()
         outputs = None
         if param['run_name'] == 'mosaic':
             fusion_layer = param['model'][0].eval()
@@ -89,6 +92,9 @@ def validation(epoch, batch_i, batch, param):
         elif param['run_name'] in ['front','bbox']:
             static_front = param['model'].eval()
             outputs = static_front(inputs).squeeze(1)
+            for i in range(outputs.shape[0]):
+                ts = compute_ts_road_map(outputs[i], labels[i])
+                param['ts'] += ts
         elif param['run_name'] in ['camerabased']:
             inputs = inputs.view(-1, 256, 16, 20)
             labels = labels.view(-1, 400, 538)
