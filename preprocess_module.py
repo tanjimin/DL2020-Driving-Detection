@@ -6,6 +6,11 @@ import torchvision
 import cv2
 import numpy as np
 
+from matplotlib.patches import Rectangle, Polygon
+import itertools
+import matplotlib.pyplot as plt
+
+
 cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if cuda else "cpu")
 
@@ -127,8 +132,66 @@ def backbone_pretrain(device, batch_sample, is_camera = True):
         polar_after_bb = res_model(batch_sample)
         return polar_after_bb
 
-    
+################################################################################
+def retrieve_grid_poly_pair(target_bbox):
+    '''
+    retrieve list of grids to be searched and list of polygon objects
+    only return grids in the outer polygon of each bbox
+    '''
 
+    polygon_list = []
+    search_grid_list = []
+    for i, bb in enumerate(target_bbox):
+        # You can check the implementation of the draw box to understand how it works 
+        point_squence = torch.stack([bb[:, 0], bb[:, 1], bb[:, 3], bb[:, 2], bb[:, 0]])
+        x = point_squence.T[0] * 10 + 400
+        y = -point_squence.T[1] * 10 + 400
+        xy_pair = torch.stack((x,y)).T
+
+        # get outer polygon
+        x_min = int(min(xy_pair[:,0]))
+        x_max = int(max(xy_pair[:,0])) + 1
+        y_min = int(min(xy_pair[:,1]))
+        y_max = int(max(xy_pair[:,1])) + 1
+        # get the search grid
+        search_grid = [*itertools.product(range(x_min-1, x_max+1), range(y_min-1, y_max+1))]
+        search_grid_list.extend(search_grid)
+        
+        polygon_list.append(Polygon(xy_pair, fill = True))
+
+    return search_grid_list, polygon_list
+
+def check_contained(pixel, init_matrix, polygon_list):
+    '''
+    check if pixel is contained in any polygon object
+    assign 1 if contained
+    '''
+
+    for poly in polygon_list:
+        if poly.contains_point(pixel):
+            init_matrix[pixel[1],pixel[0]] = 1
+            return
+
+def covert_bbox_roadmap_to_binary(search_grid_list, polygon_list):
+    '''
+    Input grids to be searched and list of polygon objects defined by bbox coordinates
+    Output 800*800 binary grid
+    Convert roadmap with bbox to binary roadmap with bbox (lanes are not included)
+    '''
+
+    init_matrix = np.zeros((800,800))
+    
+    for pixel in search_grid_list:
+        check_contained(pixel, init_matrix, polygon_list)
+    
+    return init_matrix
+
+def main_binary_roadmap_objdetection(target_bbox):
+    search_grid_list, polygon_list = retrieve_grid_poly_pair(target_bbox)
+    out_binary_bbox_map = covert_bbox_roadmap_to_binary(search_grid_list, polygon_list)
+    return out_binary_bbox_map
+
+################################################################################
 
 
 if __name__ == "__main__":
@@ -149,4 +212,15 @@ if __name__ == "__main__":
     # camera: torch.Size([2, 6, 256, 16, 20])
     # polar: torch.Size([8, 256, 188, 188])
     print(after_bb_tensor.shape)
+
+
+    target_bbox = torch.tensor([[[-19.0827, -19.0811, -23.6197, -23.6180],
+         [  4.5728,   2.5376,   4.5686,   2.5335]],
+        [[-19.8444, -19.8688, -10.1578, -10.1822],
+         [ 25.1287,  28.0330,  25.2111,  28.1154]]], dtype=torch.float64)
     
+    out_binary_bbox_map = main_binary_roadmap_objdetection(target_bbox)
+    # 800 * 800
+    print(out_binary_bbox_map.shape)
+    # plt.imshow(out_binary_bbox_map)
+    # plt.show()
