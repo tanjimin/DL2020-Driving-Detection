@@ -31,7 +31,7 @@ def init_loggers(param):
 
 
 def init_data(param):
-    trainset = FrontObjectSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_train/roadmap_image")
+    trainset = FrontObjectSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_train/road_map")
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=16, 
                                               shuffle=True, 
@@ -39,7 +39,7 @@ def init_data(param):
 
     param['train_loader'] = trainloader
 
-    validationset = FrontObjectSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_val/roadmap_image")
+    validationset = FrontObjectSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_val/road_map")
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=16, 
                                               shuffle=True, 
