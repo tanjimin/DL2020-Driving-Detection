@@ -228,14 +228,14 @@ def check_path(path):
 ##########################################################
 
 cnt = 0
+check_path('/beegfs/cy1355/obj_binary_roadmap/')
+check_path('/beegfs/cy1355/obj_binary_roadmap/road_map')
+check_path('/beegfs/cy1355/obj_binary_roadmap/roadmap_image')
 for _, target, _, filename, _ in trainloader:
     target_bbox = target[0]['bounding_box']
     binary_roadmap_objdetect = main_binary_roadmap_objdetection(target_bbox)
 
     save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
-    check_path('/beegfs/cy1355/obj_binary_roadmap/')
-    check_path('/beegfs/cy1355/obj_binary_roadmap/road_map')
-    check_path('/beegfs/cy1355/obj_binary_roadmap/roadmap_image')
     assert binary_roadmap_objdetect.shape == (800, 800)
 
     np.save(os.path.join('/beegfs/cy1355/obj_binary_roadmap/road_map', save_filename), binary_roadmap_objdetect)
@@ -244,7 +244,7 @@ for _, target, _, filename, _ in trainloader:
     cv2.imwrite(os.path.join('/beegfs/cy1355/obj_binary_roadmap/roadmap_image', cv2_filename), binary_roadmap_objdetect[...,::-1]*255)
     
     if cnt % 10 == 0:
-        print(str(28 * 126 - cnt) + ' left')
+        print(str(28 * 126 - cnt) + ' left!')
     cnt += 1
 
 
