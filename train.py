@@ -43,6 +43,11 @@ def train(epoch, batch_i, batch, param):
     elif param['run_name'] in ['front', 'bbox']:
         static_front = param['model'].train()
         outputs = static_front(inputs).squeeze(1)
+    elif param['run_name'] in ['camerabased']:
+        inputs = inputs.view(-1, 256, 16, 20)
+        labels = labels.view(-1, 400, 538)
+        static_camerabased = param['model'].train()
+        outputs = static_camerabased(inputs).squeeze(1)
     loss = param['criterion'](outputs, labels.float())
     loss.backward()
     param['optimizer'].step()
@@ -84,6 +89,11 @@ def validation(epoch, batch_i, batch, param):
         elif param['run_name'] in ['front','bbox']:
             static_front = param['model'].eval()
             outputs = static_front(inputs).squeeze(1)
+        elif param['run_name'] in ['camerabased']:
+            inputs = inputs.view(-1, 256, 16, 20)
+            labels = labels.view(-1, 400, 538)
+            static_camerabased = param['model'].eval()
+            outputs = static_camerabased(inputs).squeeze(1)
         loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
