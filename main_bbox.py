@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 from train import epoch_loop 
 from data import FrontLaneSegmentationDataset, FrontObjectSegmentationDataset
 from model import FrontStaticModel 
-
+from loss import focal_loss
 import pandas as pd
 
 # Setting initial parameters for training
@@ -15,7 +15,7 @@ def set_flags(param):
     param['device'] = torch.device("cuda:0" if torch.cuda.is_available() 
                                             else "cpu")
     param['epochs'] = 500
-    param['run_name'] = 'front'
+    param['run_name'] = 'bbox'
 
 def main():
     param = {}
@@ -29,16 +29,13 @@ def main():
 def init_loggers(param):
     pass
 
-def collate_fn(batch):
-    return tuple(zip(*batch))
 
 def init_data(param):
     trainset = FrontObjectSegmentationDataset("/beegfs/cy1355/camera_tensor_train/image_tensor", "/beegfs/cy1355/camera_tensor_train/road_map", "/beegfs/cy1355/data/annotation.csv")
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=16, 
                                               shuffle=True, 
-                                              num_workers=0,
-                                              collate_fn = collate_fn)
+                                              num_workers=0 )
 
     param['train_loader'] = trainloader
 
@@ -50,11 +47,11 @@ def init_data(param):
                                               collate_fn = collate_fn)
     param['validation_loader'] = validationloader
 def init_model(param):
-    model = FrontStaticModel().to(param['device'])
+    model = FrontStaticModel().to(param['device']) # using the same model as that of front static
     param['model'] = model
 
 def init_optimizers(param):
-    criterion = nn.BCELoss()
+    criterion = focal_loss
     parameters = param['model'].parameters()
     optimizer = optim.SGD(parameters, lr=0.001, momentum=0.9)
     param['criterion'] = criterion
