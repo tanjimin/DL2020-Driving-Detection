@@ -72,4 +72,10 @@ class FrontObjectSegmentationDataset(Dataset):
 
         return data[1,:], label
 
+if __name__ == "__main__":
+    image_path = "/beegfs/cy1355/obj_binary_roadmap_train/image_tensor"
+    label_path =  "/beegfs/cy1355/obj_binary_roadmap_train/road_map"
 
+    train_loader = FrontObjectSegmentationDataset(image_path, label_path)
+    for data, label in iter(train_loader):
+        assert (label.shape[0] == 400) & (label.shape[1] == 538)
