@@ -43,8 +43,7 @@ def init_data(param):
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=16, 
                                               shuffle=True, 
-                                              num_workers=0,
-                                              collate_fn = collate_fn)
+                                              num_workers=0)
     param['validation_loader'] = validationloader
 def init_model(param):
     model = FrontStaticModel().to(param['device']) # using the same model as that of front static

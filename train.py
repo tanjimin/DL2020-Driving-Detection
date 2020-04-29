@@ -43,7 +43,7 @@ def train(epoch, batch_i, batch, param):
     elif param['run_name'] in ['front', 'bbox']:
         static_front = param['model'].train()
         outputs = static_front(inputs).squeeze(1)
-    loss = param['criterion'](outputs, labels)
+    loss = param['criterion'](outputs, labels.float())
     loss.backward()
     param['optimizer'].step()
     param['running_loss'] += loss.item()
@@ -84,6 +84,6 @@ def validation(epoch, batch_i, batch, param):
         elif param['run_name'] in ['front','bbox']:
             static_front = param['model'].eval()
             outputs = static_front(inputs).squeeze(1)
-        loss = param['criterion'](outputs, labels)
+        loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
