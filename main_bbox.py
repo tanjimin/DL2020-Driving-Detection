@@ -24,6 +24,7 @@ def main():
     init_data(param)
     init_model(param)
     init_optimizers(param)
+    param['ts'] = 0
     epoch_loop(param)
 
 def init_loggers(param):
