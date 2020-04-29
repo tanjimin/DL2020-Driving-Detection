@@ -12,14 +12,17 @@ import torchvision
 
 import matplotlib.pyplot as plt
 
+from preprocess_module import retrieve_grid_poly_pair, check_contained, \
+                           covert_bbox_roadmap_to_binary, main_binary_roadmap_objdetection
+
 cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if cuda else "cpu")
 
 image_folder = '/beegfs/cy1355/data'
 annotation_csv = '/beegfs/cy1355/data/annotation.csv'
 
-# image_folder = './data'
-# annotation_csv = './data/annotation.csv'
+# image_folder = '../Project/z_own/data'
+# annotation_csv = '../Project/z_own/data/annotation.csv'
 
 unlabeled_scene_index = np.arange(106)
 labeled_scene_index = np.arange(106, 134)
@@ -122,7 +125,7 @@ labeled_trainset = LabeledDataset(image_folder=image_folder,
                                   transform=transform,
                                   extra_info=False
                                  )
-trainloader = torch.utils.data.DataLoader(labeled_trainset, batch_size=1, shuffle=True, num_workers=0, collate_fn=collate_fn)
+trainloader = torch.utils.data.DataLoader(labeled_trainset, batch_size=1, shuffle=False, num_workers=0, collate_fn=collate_fn)
 
 
 # load model
@@ -132,6 +135,9 @@ res_model = nn.Sequential(*modules)
 res_model.eval()
 res_model.to(device)
 
+def check_path(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
 
 ##########################################################
 # save camera-level tensor
@@ -166,56 +172,80 @@ res_model.to(device)
 # output shape: [256, 188, 188]
 ##########################################################
 
-def warpper(data):
+# def warpper(data):
     
-    img = data[0].permute(1,2,0).numpy()
-    img = (img * 255).astype(np.uint8)
+#     img = data[0].permute(1,2,0).numpy()
+#     img = (img * 255).astype(np.uint8)
     
-    img = np.rot90(img)
-    img = np.flip(img, 1)
-    # (width, height * 1.5, 3)
-    new_img = np.zeros((1836, 390, 3))
-    # -height
-    new_img[:, -256:, :] = img
-    img = new_img
-    img = cv2.resize(img, (3000, 3000))
+#     img = np.rot90(img)
+#     img = np.flip(img, 1)
+#     # (width, height * 1.5, 3)
+#     new_img = np.zeros((1836, 390, 3))
+#     # -height
+#     new_img[:, -256:, :] = img
+#     img = new_img
+#     img = cv2.resize(img, (3000, 3000))
 
-    polar_image = cv2.linearPolar(src=img, center=(1500, 1500), maxRadius=1500, flags=cv2.WARP_FILL_OUTLIERS + cv2.WARP_INVERSE_MAP)
-    polar_image = polar_image.astype(np.uint8)
+#     polar_image = cv2.linearPolar(src=img, center=(1500, 1500), maxRadius=1500, flags=cv2.WARP_FILL_OUTLIERS + cv2.WARP_INVERSE_MAP)
+#     polar_image = polar_image.astype(np.uint8)
     
-    return polar_image
+#     return polar_image
 
-def check_path(path):
-    if not os.path.exists(path):
-        os.mkdir(path)
+# cnt = 0
+# for _, _, road_img, filename, concat_width_img in trainloader:
+
+#     polar_image = warpper(concat_width_img)
+#     polar_image = np.rot90(np.rot90(np.rot90(np.fliplr(polar_image))))
+
+#     input_res = torch.Tensor(polar_image / 255).unsqueeze(0).permute(0,3,1,2) 
+#     # input_res ([1, 3, 3000, 3000])
+#     input_res = input_res.to(device)
+#     output = res_model(input_res)
+    
+#     save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
+#     output = output.squeeze(0)
+    
+#     check_path('/beegfs/cy1355/polar_tensor')
+#     check_path('/beegfs/cy1355/polar_tensor/image_tensor')
+#     check_path('/beegfs/cy1355/polar_tensor/road_map')
+#     check_path('/beegfs/cy1355/polar_tensor/polar_image')
+
+#     assert road_img[0].shape == torch.Size([800, 800])
+#     assert output.shape == torch.Size([256, 188, 188])
+
+#     np.save(os.path.join('/beegfs/cy1355/polar_tensor/image_tensor', save_filename), output.detach().cpu().numpy())
+#     np.save(os.path.join('/beegfs/cy1355/polar_tensor/road_map', save_filename), road_img[0].detach().numpy())  
+#     cv2_filename = save_filename + '.png'
+#     cv2.imwrite(os.path.join('/beegfs/cy1355/polar_tensor/polar_image', cv2_filename), polar_image[...,::-1])
+    
+#     if cnt % 10 == 0:
+#         print(str(28 * 126 - cnt) + ' left')
+#     cnt += 1
+
+
+##########################################################
+# save binary roadmap with bbox
+##########################################################
 
 cnt = 0
-for _, _, road_img, filename, concat_width_img in trainloader:
+for _, target, _, filename, _ in trainloader:
+    target_bbox = target[0]['bounding_box']
+    binary_roadmap_objdetect = main_binary_roadmap_objdetection(target_bbox)
 
-    polar_image = warpper(concat_width_img)
-    polar_image = np.rot90(np.rot90(np.rot90(np.fliplr(polar_image))))
-
-    input_res = torch.Tensor(polar_image / 255).unsqueeze(0).permute(0,3,1,2) 
-    # input_res ([1, 3, 3000, 3000])
-    input_res = input_res.to(device)
-    output = res_model(input_res)
-    
     save_filename = filename[0].split('/')[-2] + '_' + filename[0].split('/')[-1]
-    output = output.squeeze(0)
-    
-    check_path('/beegfs/cy1355/polar_tensor')
-    check_path('/beegfs/cy1355/polar_tensor/image_tensor')
-    check_path('/beegfs/cy1355/polar_tensor/road_map')
-    check_path('/beegfs/cy1355/polar_tensor/polar_image')
+    check_path('/beegfs/cy1355/obj_binary_roadmap/')
+    check_path('/beegfs/cy1355/obj_binary_roadmap/road_map')
+    check_path('/beegfs/cy1355/obj_binary_roadmap/roadmap_image')
+    assert binary_roadmap_objdetect.shape == (800, 800)
 
-    assert road_img[0].shape == torch.Size([800, 800])
-    assert output.shape == torch.Size([256, 188, 188])
+    np.save(os.path.join('/beegfs/cy1355/obj_binary_roadmap/road_map', save_filename), binary_roadmap_objdetect)
 
-    np.save(os.path.join('/beegfs/cy1355/polar_tensor/image_tensor', save_filename), output.detach().cpu().numpy())
-    np.save(os.path.join('/beegfs/cy1355/polar_tensor/road_map', save_filename), road_img[0].detach().numpy())  
     cv2_filename = save_filename + '.png'
-    cv2.imwrite(os.path.join('/beegfs/cy1355/polar_tensor/polar_image', cv2_filename), polar_image[...,::-1])
+    cv2.imwrite(os.path.join('/beegfs/cy1355/obj_binary_roadmap/roadmap_image', cv2_filename), binary_roadmap_objdetect[...,::-1]*255)
     
     if cnt % 10 == 0:
         print(str(28 * 126 - cnt) + ' left')
     cnt += 1
+
+
+    
