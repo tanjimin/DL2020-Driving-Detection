@@ -21,9 +21,9 @@ def epoch_loop(param):
                             '{}/fusion_{}'.format(save_path, epoch))
                     torch.save(param['model'][1], 
                             '{}/static_{}'.format(save_path, epoch))
-                elif param['run_name'] in ['polar', 'front']:
+                elif param['run_name'] in ['polar', 'front', 'bbox']:
                     torch.save(param['model'], 
-                            '{}/static_polar_{}'.format(save_path, epoch))
+                            '{}/static_{}_{}'.format(save_path, param['run_name'], epoch))
 
 def train_loop(epoch, param):
     param['running_loss'] = 0.0 
