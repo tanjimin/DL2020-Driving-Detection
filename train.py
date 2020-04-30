@@ -52,6 +52,13 @@ def train(epoch, batch_i, batch, param):
         labels = labels.view(-1, 400, 538)
         static_camerabased = param['model'].train()
         outputs = static_camerabased(inputs).squeeze(1)
+    elif param['run_name'] == 'bbox_reg':
+        camera_feature = camera_model(inputs)
+        bbox_feature = bbox_model(bbox_inputs) # Batched bbox
+        camera_feature_batch = camera_feature.repeat(bbox_feature.shape[0], 1, 1, 1) # repeat to match num of bbox features
+        hidden = torch.cat((camera_feature, bbox_feature), dim = 1)
+        outputs = classifier(hidden)
+
     loss = param['criterion'](outputs, labels.float())
     loss.backward()
     param['optimizer'].step()
