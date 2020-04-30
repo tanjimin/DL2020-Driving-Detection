@@ -2,6 +2,7 @@ import numpy as np
 import random
 
 class BboxGenerate():
+    
     def __init__(self, roadmap_height, roadmap_width, car_height, car_width):
         self.roadmap_height = roadmap_height
         self.roadmap_width = roadmap_width
@@ -20,31 +21,64 @@ class BboxGenerate():
                 else:
                     box = np.array([left_top, right_top, left_bottom, right_bottom])
                     out.append(box)
-        out_array = np.array(out)
+                    
         # (590436, 4, 2) = ((800 - 45 + 1) * (800 - 20 + 1), 4, 2)
-        # print(out_array.shape)
+        # print(out_array.shape)           
+        out_array = np.array(out)
         self.bbox_gen = out_array
     
-    def sample_bbox(self, k, bbox_array):
-        total_n = bbox_array.shape[0]
-        pick_idx = random.sample(range(total_n), k)        
-        pick_bbox = bbox_array[pick_idx, :]
+    def sample(self, k, input_bbox_array):
+        total_n = self.bbox_gen.shape[0]
+        pick_idx = random.sample(range(total_n), k)   
+        
+        # get positive coordinates
+        points_pos = np.argwhere(input_bbox_array).tolist()
+        
+        # loop over each picked indices
+        # if any cornor is contained in the positive coordinates, remove from the picked indices
+        for i in pick_idx:
+            picked = self.bbox_gen[i, :]
+            for coor in picked:
+                if coor.tolist() in points_pos:
+                    pick_idx.remove(i)
+                    break
+                    
+        # continue to sample the remaining
+        # sample logic but sample fewer and fewer if not having k sample bbox
+        # may sample the same indices, check length with set()
+        while len(set(pick_idx)) != k:
+            pick_idx_new = random.sample(range(total_n), k - len(set(pick_idx)))
+            for i in pick_idx_new:
+                picked = self.bbox_gen[i, :]
+                for coor in picked:
+                    if coor.tolist() in points_pos:
+                        pick_idx_new.remove(i)
+                        break
+            pick_idx.extend(pick_idx_new)
+        
+        # may have more indices than k stored in pick_idx
+        # remove duplicates to get exactly k indices
+        pick_bbox = self.bbox_gen[list(set(pick_idx)), :]
         return pick_bbox
     
-    def return_gen_bbox(self):
+    def get_bbox(self):
         return self.bbox_gen
     
 
 
-
 if __name__ == "__main__":
+    # 800 * 800
+    input_box = np.load('./obj_binary_roadmap/road_map/scene_106_sample_0.npy')
+    
     roadmap_dim = (800,800)
     car_height = 20
     car_width = 45
 
     bbox_gen = BboxGenerate(roadmap_dim[0], roadmap_dim[1], car_height, car_width)
-    bbox_all = bbox_gen.return_gen_bbox()
+    bbox_all = bbox_gen.get_bbox()
+
     # (590436, 4, 2)
     print(bbox_all.shape)
-    # len = 10
-    print(len(bbox_gen.sample_bbox(10, bbox_all)))
+
+    # len = 100
+    print(len(bbox_gen.sample(100, input_box)))
