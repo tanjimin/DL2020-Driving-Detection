@@ -144,6 +144,62 @@ class FrontStaticModel(nn.Module):
         out = self.deconv4(out)
         return out
 
+class FrontDynamicModel(nn.Module):
+    """
+    Inputs:
+        inputs: Image representations   batch * C * H * W. currently 6 * 256 * 16 * 20 
+    Ouputs:
+        out: Flattened representations   batch * (H*W) * C'
+    """
+    def __init__(self):
+        super(FrontDynamicModel, self).__init__() 
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.projection_original_features = nn.Linear(256, 32)
+
+    def forward(self, inputs):
+        out = self.avgpool(inputs)
+        #out = inputs.permute(0, 2, 3, 1).view(-1, 16 * 20, 256)
+        out = torch.flatten(out, 1)
+        out = self.projection_original_features(out)
+        return out
+
+
+class BoundingBoxEncoder(nn.Module):
+    """
+    Inputs:
+        samples: Bounding box coordinates   (batch * samples) * 8  
+    Ouputs:
+        out: Bounding box representations   (batch * samples) * 8 * C'
+    """
+    def __init__(self):
+        super(BoundingBoxEncoder, self).__init__() 
+        self.fc1 = nn.Sequential(nn.Linear(8, 16), nn.ReLU())
+        self.fc2 = nn.Linear(16, 32)
+
+    def forward(self, samples):
+        out = self.fc1(samples.unsqueeze(1))
+        out = self.fc2(out)
+        return out
+
+
+# class BoundingBoxDecoder(nn.Module):
+#     """
+#     Inputs:
+#         Concatenated vector from FrontDynamicModel and BoundingBoxEncoder (batch * samples) * (32+32)
+#     Ouputs:
+#         Bounding boc probabilities   (batch * samples) * 1
+#     """
+#     def __init__(self):
+#         super(BoundingBoxDecoder, self).__init__() 
+#         self.fc1 = nn.Sequential(nn.Linear(32+32, 16), nn.ReLU())
+#         self.fc2 = nn.Sequential(nn.Linear(16, 1), nn.Sigmoid())
+
+#     def forward(slef, inputs):
+#         out = self.fc1(inputs) 
+#         out = self.fc2(out)
+#         return out
+
+
 if __name__ == "__main__":
     # inputs = torch.rand((8, 6, 256, 16, 20))
 
@@ -161,8 +217,21 @@ if __name__ == "__main__":
     #     out3 = staticpolar(inputs2)
     #     print(out3.shape) 
 
-    inputs3 = torch.rand((8, 256, 16, 20))
-    frontStatic = FrontStaticModel().eval()
+    # inputs3 = torch.rand((8, 256, 16, 20))
+    # frontStatic = FrontStaticModel().eval()
+    # with torch.no_grad():
+    #     out4 = frontStatic(inputs3)
+    #     print(out4.shape) 
+
+    inputs4 = torch.rand((8, 256, 16, 20))
+    inputs5 = torch.rand((8, 8))
+    m1 = FrontDynamicModel().eval()
+    m2 = BoundingBoxEncoder().eval()
+    #m3 = BoundingBoxDecoder().eval()
     with torch.no_grad():
-        out4 = frontStatic(inputs3)
-        print(out4.shape) 
+        out5_1 = m1(inputs4)
+        out5_2 = m2(inputs5)
+        print(out5_1.shape)
+        print(out5_2.shape)
+
+
