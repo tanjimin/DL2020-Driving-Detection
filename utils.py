@@ -7,14 +7,7 @@ class BboxGenerate():
         self.roadmap_width = roadmap_width
         self.car_height = car_height
         self.car_width = car_width
-    
-    def sample_bbox(self, k, bbox_array):
-        total_n = bbox_array.shape[0]
-        pick_idx = random.sample(range(total_n), k)        
-        pick_bbox = bbox_array[pick_idx, :]
-        return pick_bbox
-    
-    def generate_all(self):
+        
         out = []
         for i in range(self.roadmap_width):
             for j in range(self.roadmap_height):
@@ -28,10 +21,19 @@ class BboxGenerate():
                     box = np.array([left_top, right_top, left_bottom, right_bottom])
                     out.append(box)
         out_array = np.array(out)
-        
         # (590436, 4, 2) = ((800 - 45 + 1) * (800 - 20 + 1), 4, 2)
         # print(out_array.shape)
-        return out_array 
+        self.bbox_gen = out_array
+    
+    def sample_bbox(self, k, bbox_array):
+        total_n = bbox_array.shape[0]
+        pick_idx = random.sample(range(total_n), k)        
+        pick_bbox = bbox_array[pick_idx, :]
+        return pick_bbox
+    
+    def return_gen_bbox(self):
+        return self.bbox_gen
+    
 
 
 
@@ -41,7 +43,7 @@ if __name__ == "__main__":
     car_width = 45
 
     bbox_gen = BboxGenerate(roadmap_dim[0], roadmap_dim[1], car_height, car_width)
-    bbox_all = bbox_gen.generate_all()
+    bbox_all = bbox_gen.return_gen_bbox()
     # (590436, 4, 2)
     print(bbox_all.shape)
     # len = 10
