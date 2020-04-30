@@ -24,6 +24,8 @@ def epoch_loop(param):
                 elif param['run_name'] in ['polar', 'front', 'bbox']:
                     torch.save(param['model'], 
                             '{}/static_{}_{}'.format(save_path, param['run_name'], epoch))
+                else:
+                    raise Error("Param['run name'] not found. Model cannot be saved.")
 
 def train_loop(epoch, param):
     param['running_loss'] = 0.0 
