@@ -135,3 +135,5 @@ data/
 saves*
 sample_output*
 .DS_Store
+bbox_*
+

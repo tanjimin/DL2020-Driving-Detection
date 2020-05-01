@@ -24,7 +24,7 @@ def validation(epoch, batch_i, batch, param):
             inputs = inputs.to(param['device'])
             labels = labels.to(param['device'])
         else:
-            inputs, samples, labels = batch
+            inputs, samples, labels, graph = batch
             inputs = inputs.to(param['device'])
             labels = labels.to(param['device'])
             samples = samples.to(param['device'])
@@ -57,7 +57,7 @@ def validation(epoch, batch_i, batch, param):
             bbox_feature_positive = bbox_feature[labels.reshape(-1) == 1]
             camera_feature_batch_positive = camera_feature_batch[labels.reshape(-1) == 1]
             labels_positive = labels.reshape(-1)[labels.reshape(-1) == 1]
-            gen_bbox_heatmap(param, None, camera_feature)
+            gen_bbox_heatmap(param, graph, camera_feature, epoch, batch_i)
 
 
         if param['run_name'] != "bbox_reg":
@@ -67,7 +67,7 @@ def validation(epoch, batch_i, batch, param):
         #loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
-def gen_bbox_heatmap(param, ground_truth, camera_feature):
+def gen_bbox_heatmap(param, ground_truth, camera_feature, epoch, batch):
     batch_size = camera_feature.shape[0]
     all_bbox = param['validation_loader'].dataset.box_sampler.get_bbox() - 269
     all_bbox_coord = all_bbox.mean(axis = 1)
@@ -80,6 +80,10 @@ def gen_bbox_heatmap(param, ground_truth, camera_feature):
         # less the loss more likely it is a car
         fig, ax = plt.subplots()
         ax.scatter(all_bbox_coord[:, 0], all_bbox_coord[:, 1], c = loss.detach().cpu().numpy(), s = 1, edgecolor='')
-        plt.savefig('test_img.png')
+        img_dir = 'bbox_imgs'
+        if not os.path.exists(img_dir): os.mkdir(img_dir)
+        plt.savefig('{}/test_img_{}_{}.png'.format(img_dir, epoch, batch))
+        plt.close()
+        cv2.imwrite('{}/test_img_{}_{}_label.png'.format(img_dir, epoch, batch), np.rot90(ground_truth[camera_batch].numpy() * 255))
         break
 

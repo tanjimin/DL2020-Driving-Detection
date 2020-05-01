@@ -10,7 +10,6 @@ from validation import validation_loop
 
 def epoch_loop(param):
     for epoch in range(param['epochs']):
-        validation_loop(epoch, param)
         train_loop(epoch, param) 
         if epoch % 10 == 0:
             validation_loop(epoch, param)
@@ -42,7 +41,7 @@ def train(epoch, batch_i, batch, param):
         inputs = inputs.to(param['device'])
         labels = labels.to(param['device'])
     else:
-        inputs, samples, labels = batch
+        inputs, samples, labels, _ = batch
         inputs = inputs.to(param['device'])
         labels = labels.to(param['device'])
         samples = samples.to(param['device'])

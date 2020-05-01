@@ -162,8 +162,9 @@ class ObjectRegressionDataset(Dataset):
         # output label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
         #print(data.shape, samples.shape, target.shape)
         if self.front_only:
-            return data[1,:], samples, target
-        return data, samples, target
+            return data[1,:], samples, target, label
+        else:
+            return data, samples, target, label
 
 if __name__ == "__main__":
     image_path = "/beegfs/cy1355/obj_binary_roadmap_train/image_tensor"
