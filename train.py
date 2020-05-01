@@ -133,11 +133,15 @@ def validation(epoch, batch_i, batch, param):
             camera_feature = camera_model(inputs)
             bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
             camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1).view(-1, 32) # repeat to match num of bbox features
-            
+            bbox_feature_positive = bbox_feature[labels.reshape(-1) == 1]
+            camera_feature_batch_positive = camera_feature_batch[labels.reshape(-1) == 1]
+            labels_positive = labels.reshape(-1)[labels.reshape(-1) == 1]
+
+
         if param['run_name'] != "bbox_reg":
             loss = param['criterion'](outputs, labels.float())
         else:
-            loss = param['criterion'](camera_feature_batch, bbox_feature, labels.view(-1,1))
+            loss = param['criterion'](camera_feature_batch_positive, bbox_feature_positive, labels_positive)
         #loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
