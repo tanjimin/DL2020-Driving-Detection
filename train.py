@@ -21,7 +21,7 @@ def epoch_loop(param):
                             '{}/fusion_{}'.format(save_path, epoch))
                     torch.save(param['model'][1], 
                             '{}/static_{}'.format(save_path, epoch))
-                elif param['run_name'] in ['polar', 'front', 'bbox','bbox_reg']:
+                elif param['run_name'] in ['polar', 'front', 'camerabased', 'bbox','bbox_reg']:
                     torch.save(param['model'], 
                             '{}/static_{}_{}'.format(save_path, param['run_name'], epoch))
                 else:
