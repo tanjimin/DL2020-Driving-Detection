@@ -30,14 +30,14 @@ def init_loggers(param):
 def init_data(param):
     trainset = CameraBasedLaneSegmentationDataset("/beegfs/cy1355/camera_tensor_train/image_tensor", "/beegfs/cy1355/camera_tensor_train/road_map")
     trainloader = torch.utils.data.DataLoader(trainset, 
-                                              batch_size=16, 
+                                              batch_size=64, 
                                               shuffle=True, 
                                               num_workers=0)
     param['train_loader'] = trainloader
 
     validationset = CameraBasedLaneSegmentationDataset("/beegfs/cy1355/camera_tensor_val/image_tensor", "/beegfs/cy1355/camera_tensor_val/road_map")
     validationloader = torch.utils.data.DataLoader(validationset, 
-                                              batch_size=16, 
+                                              batch_size=64, 
                                               shuffle=True, 
                                               num_workers=0)
     param['validation_loader'] = validationloader
