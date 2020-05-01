@@ -79,13 +79,13 @@ def train(epoch, batch_i, batch, param):
     if epoch % 5 == 1 and batch_i % 100 == 1:
         print("Epoch {}, Loss: {}".format(epoch, param['running_loss'] / batch_i))
         sample_path = 'sample_output_{}'.format(param['run_name'])
-        if not os.path.exists(sample_path): 
-            os.mkdir(sample_path)
-        else:
-            cv2.imwrite('{}/sample_{}_{}.png'.format(sample_path, 
-                                                     epoch, 
-                                                     batch_i), 
-                        outputs[0].detach().cpu().numpy() * 255)
+        #if not os.path.exists(sample_path): 
+        #    os.mkdir(sample_path)
+        #else:
+        #    cv2.imwrite('{}/sample_{}_{}.png'.format(sample_path, 
+        #                                             epoch, 
+        #                                             batch_i), 
+        #                outputs[0].detach().cpu().numpy() * 255)
 
 
 def validation_loop(epoch, param):
@@ -137,7 +137,7 @@ def validation(epoch, batch_i, batch, param):
         if param['run_name'] != "bbox_reg":
             loss = param['criterion'](outputs, labels.float())
         else:
-            loss = param['criterion'](camera_feature_batch, bbox_feature, labels)
+            loss = param['criterion'](camera_feature_batch, bbox_feature, labels.view(-1,1))
         #loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
