@@ -115,9 +115,11 @@ class ObjectRegressionDataset(Dataset):
         self.data_names = sorted(os.listdir(data_dir))
         self.annotation_dataframe = pd.read_csv(annotation_file)
         self.front_only = front_only
-        self.sampler = BboxGenerate(400, 538, 20, 45)
         if front_only:
             self._filter_nonfront()
+            self.sampler = BboxGenerate(400, 538, 20, 45)
+        else:
+            self.sampler = BboxGenerate(800, 800, 20, 45)
 
     def _filter_nonfront(self):
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_x'] >= 0) | (self.annotation_dataframe['fr_x'] >= 0)]
@@ -133,6 +135,8 @@ class ObjectRegressionDataset(Dataset):
         data = np.load(data_path)
         label_path = os.path.join(self.label_dir, self.data_names[idx])
         label = (np.load(label_path) * 1).astype(np.single)
+        if self.front_only:
+            label = label[131:669,400:]
     
         id_list = self.data_names[idx].split('_')
         scene_id, sample_id = int(id_list[1]), int(id_list[-1].split('.')[0])
@@ -142,11 +146,12 @@ class ObjectRegressionDataset(Dataset):
 
         neg_num= 100 - pos_samples.shape[0]
         neg_samples = torch.FloatTensor(self.sampler.sample(neg_num, label))
-        #print(neg_samples.shape)
-        neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
+        if self.front_only:
+            neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
+        else:
+            neg_samples[:,:,1] = neg_samples[:,:,1] - 400
+            neg_samples[:,:,0] = neg_samples[:,:,0] - 400
         neg_samples = neg_samples.view(-1,8)
-        #print(neg_samples.shape)
-        #print(pos_samples.shape)
         samples = torch.cat([pos_samples, neg_samples], 0)
         target = torch.cat([torch.ones(pos_samples.shape[0]), -1 * torch.ones(neg_num)]).float()
         # data: (256, 16, 20)
