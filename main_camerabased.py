@@ -14,6 +14,7 @@ def set_flags(param):
                                             else "cpu")
     param['epochs'] = 500
     param['run_name'] = 'camerabased'
+    
 
 def main():
     param = {}
@@ -28,16 +29,19 @@ def init_loggers(param):
     pass
 
 def init_data(param):
+    
+    batch_size_n = 64
+
     trainset = CameraBasedLaneSegmentationDataset("/beegfs/cy1355/camera_tensor_train/image_tensor", "/beegfs/cy1355/camera_tensor_train/road_map")
     trainloader = torch.utils.data.DataLoader(trainset, 
-                                              batch_size=64, 
+                                              batch_size = batch_size_n, 
                                               shuffle=True, 
                                               num_workers=0)
     param['train_loader'] = trainloader
 
     validationset = CameraBasedLaneSegmentationDataset("/beegfs/cy1355/camera_tensor_val/image_tensor", "/beegfs/cy1355/camera_tensor_val/road_map")
     validationloader = torch.utils.data.DataLoader(validationset, 
-                                              batch_size=64, 
+                                              batch_size = batch_size_n, 
                                               shuffle=True, 
                                               num_workers=0)
     param['validation_loader'] = validationloader
