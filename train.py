@@ -21,7 +21,7 @@ def epoch_loop(param):
                             '{}/fusion_{}'.format(save_path, epoch))
                     torch.save(param['model'][1], 
                             '{}/static_{}'.format(save_path, epoch))
-                elif param['run_name'] in ['polar', 'front', 'bbox']:
+                elif param['run_name'] in ['polar', 'front', 'bbox','bbox_reg']:
                     torch.save(param['model'], 
                             '{}/static_{}_{}'.format(save_path, param['run_name'], epoch))
                 else:
@@ -33,11 +33,18 @@ def train_loop(epoch, param):
         train(epoch, batch_i, batch, param)
 
 def train(epoch, batch_i, batch, param):
-    inputs, labels = batch 
-    inputs = inputs.to(param['device'])
-    labels = labels.to(param['device'])
     param['optimizer'].zero_grad()
     outputs = None
+    if param['run_name'] != 'bbox_reg':
+        inputs, labels = batch 
+        inputs = inputs.to(param['device'])
+        labels = labels.to(param['device'])
+    else:
+        inputs, samples, labels = batch
+        inputs = inputs.to(param['device'])
+        labels = labels.to(param['device'])
+        samples = samples.to(param['device'])
+
     if param['run_name'] == 'mosaic':
         fusion_layer = param['model'][0].train()
         static_model = param['model'][1].train()
@@ -55,13 +62,16 @@ def train(epoch, batch_i, batch, param):
         static_camerabased = param['model'].train()
         outputs = static_camerabased(inputs).squeeze(1)
     elif param['run_name'] == 'bbox_reg':
+        camera_model = param['model'][0].train()
+        bbox_model = param['model'][1].train()
         camera_feature = camera_model(inputs)
-        bbox_feature = bbox_model(bbox_inputs) # Batched bbox
+        bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
         camera_feature_batch = camera_feature.repeat(bbox_feature.shape[0], 1, 1, 1) # repeat to match num of bbox features
-        hidden = torch.cat((camera_feature, bbox_feature), dim = 1)
-        outputs = classifier(hidden)
-
-    loss = param['criterion'](outputs, labels.float())
+        
+    if param['run_name'] != "bbox_reg":
+        loss = param['criterion'](outputs, labels.float())
+    else:
+        loss = param['criterion'](camera_feature, bbox_feature, labels)
     loss.backward()
     param['optimizer'].step()
     param['running_loss'] += loss.item()
@@ -86,10 +96,17 @@ def validation_loop(epoch, param):
 
 def validation(epoch, batch_i, batch, param):
     with torch.no_grad():
-        inputs, labels = batch 
-        inputs = inputs.to(param['device'])
-        labels = labels.to(param['device'])
         outputs = None
+        if param['run_name'] != 'bbox_reg':
+            inputs, labels = batch 
+            inputs = inputs.to(param['device'])
+            labels = labels.to(param['device'])
+        else:
+            inputs, samples, labels = batch
+            inputs = inputs.to(param['device'])
+            labels = labels.to(param['device'])
+            samples = samples.to(param['device'])
+
         if param['run_name'] == 'mosaic':
             fusion_layer = param['model'][0].eval()
             static_model = param['model'][1].eval()
@@ -109,6 +126,17 @@ def validation(epoch, batch_i, batch, param):
             labels = labels.view(-1, 400, 538)
             static_camerabased = param['model'].eval()
             outputs = static_camerabased(inputs).squeeze(1)
-        loss = param['criterion'](outputs, labels.float())
+        elif param['run_name'] == 'bbox_reg':
+            camera_model = param['model'][0].train()
+            bbox_model = param['model'][1].train()
+            camera_feature = camera_model(inputs)
+            bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
+            camera_feature_batch = camera_feature.repeat(bbox_feature.shape[0], 1, 1, 1) # repeat to match num of bbox features
+            
+        if param['run_name'] != "bbox_reg":
+            loss = param['criterion'](outputs, labels.float())
+        else:
+            loss = param['criterion'](camera_feature, bbox_feature, labels)
+        #loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 

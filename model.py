@@ -179,7 +179,7 @@ class BoundingBoxEncoder(nn.Module):
     def forward(self, samples):
         out = self.fc1(samples.unsqueeze(1))
         out = self.fc2(out)
-        return out
+        return out.squeeze()
 
 
 # class BoundingBoxDecoder(nn.Module):

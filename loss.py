@@ -66,7 +66,8 @@ def focal_loss(y_pred, y_true, alpha = 0.25, gamma = 2, reduction = 'mean'):
     # else:
     #     raise Error('Wrong reduction defined for focal loss')
 
-
+def contrasiveloss(original_features, path_features):
+    pass
 
 if __name__ == "__main__":
 
