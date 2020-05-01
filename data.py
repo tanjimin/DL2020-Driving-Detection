@@ -115,7 +115,7 @@ class ObjectRegressionDataset(Dataset):
         self.data_names = sorted(os.listdir(data_dir))
         self.annotation_dataframe = pd.read_csv(annotation_file)
         self.front_only = front_only
-        self.sampler = BboxGenerate(800, 800, 20, 45)
+        self.sampler = BboxGenerate(400, 538, 20, 45)
         if front_only:
             self._filter_nonfront()
 
@@ -138,20 +138,26 @@ class ObjectRegressionDataset(Dataset):
         scene_id, sample_id = int(id_list[1]), int(id_list[-1].split('.')[0])
         data_entries = self.annotation_dataframe[(self.annotation_dataframe['scene'] == scene_id) & (self.annotation_dataframe['sample'] == sample_id)]
         corners = data_entries[['bl_x', 'bl_y', 'fl_x', 'fl_y', 'br_x', 'br_y', 'fr_x','fr_y']].to_numpy()
-        pos_samples = torch.as_tensor(corners).view(-1, 8)
+        pos_samples = torch.as_tensor(corners).view(-1, 8).float()
 
-        neg_num= 1000 - pos_samples.shape[0]
-        neg_samples = self.sampler.sample(neg_num, label).view(-1, 8)
-        samples = torch.cat([pos_samples, neg_samples], 0).float()
-        target = torch.cat([torch.ones(label.shape[0]), -1 * torch.ones(neg_sample)]).float()
+        neg_num= 100 - pos_samples.shape[0]
+        neg_samples = torch.FloatTensor(self.sampler.sample(neg_num, label))
+        #print(neg_samples.shape)
+        neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
+        neg_samples = neg_samples.view(-1,8)
+        #print(neg_samples.shape)
+        #print(pos_samples.shape)
+        samples = torch.cat([pos_samples, neg_samples], 0)
+        target = torch.cat([torch.ones(pos_samples.shape[0]), -1 * torch.ones(neg_num)]).float()
         # data: (256, 16, 20)
-        # samples: (n = 1000, 8)
+        # samples: (n = 100, 8)
         # target: 1000
         # data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
 
         # output label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
+        #print(data.shape, samples.shape, target.shape)
         if self.front_only:
-            return data[1,:], label
+            return data[1,:], samples, target
         return data, samples, target
 
 if __name__ == "__main__":

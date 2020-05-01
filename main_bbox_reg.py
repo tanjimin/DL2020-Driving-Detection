@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.optim as optim
 
 import torchvision
+import itertools
 import torchvision.transforms as transforms
 from train import epoch_loop 
-from data import ObjectSegmentationDataset
+from data import ObjectRegressionDataset
 from model import FrontDynamicModel, BoundingBoxEncoder 
 #from loss import focal_loss
 import pandas as pd
@@ -32,7 +33,8 @@ def init_loggers(param):
 
 
 def init_data(param):
-    trainset = FrontObjectSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", "/beegfs/cy1355/data/annotation.csv", True)
+    trainset = ObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", 
+                                       "/beegfs/cy1355/obj_binary_roadmap_train/road_map",  "/beegfs/cy1355/data/annotation.csv", True)
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=32, 
                                               shuffle=True, 
@@ -40,7 +42,8 @@ def init_data(param):
 
     param['train_loader'] = trainloader
 
-    validationset = FrontObjectSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", "/beegfs/cy1355/data/annotation.csv", True)
+    validationset = ObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", 
+                                            "/beegfs/cy1355/obj_binary_roadmap_val/road_map", "/beegfs/cy1355/data/annotation.csv", True)
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=32, 
                                               shuffle=True, 
@@ -54,8 +57,8 @@ def init_model(param):
 
 def init_optimizers(param):
     criterion = nn.CosineEmbeddingLoss(0.1)
-    parameters = param['model'].parameters()
-    optimizer = optim.SGD(parameters, lr=0.001, momentum=0.9)
+    parameters = [param['model'][0].parameters(), param['model'][1].parameters()]
+    optimizer = optim.SGD(itertools.chain( *parameters), lr=0.001, momentum=0.9)
     param['criterion'] = criterion
     param['optimizer'] = optimizer
 

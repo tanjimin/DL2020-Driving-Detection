@@ -66,12 +66,13 @@ def train(epoch, batch_i, batch, param):
         bbox_model = param['model'][1].train()
         camera_feature = camera_model(inputs)
         bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
-        camera_feature_batch = camera_feature.repeat(bbox_feature.shape[0], 1, 1, 1) # repeat to match num of bbox features
+        camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1).view(-1, 32) # repeat to match num of bbox features
+        #print(camera_feature_batch.shape, )
         
     if param['run_name'] != "bbox_reg":
         loss = param['criterion'](outputs, labels.float())
     else:
-        loss = param['criterion'](camera_feature, bbox_feature, labels)
+        loss = param['criterion'](camera_feature_batch, bbox_feature, labels.view(-1,1))
     loss.backward()
     param['optimizer'].step()
     param['running_loss'] += loss.item()
@@ -131,12 +132,12 @@ def validation(epoch, batch_i, batch, param):
             bbox_model = param['model'][1].train()
             camera_feature = camera_model(inputs)
             bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
-            camera_feature_batch = camera_feature.repeat(bbox_feature.shape[0], 1, 1, 1) # repeat to match num of bbox features
+            camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1).view(-1, 32) # repeat to match num of bbox features
             
         if param['run_name'] != "bbox_reg":
             loss = param['criterion'](outputs, labels.float())
         else:
-            loss = param['criterion'](camera_feature, bbox_feature, labels)
+            loss = param['criterion'](camera_feature_batch, bbox_feature, labels)
         #loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
