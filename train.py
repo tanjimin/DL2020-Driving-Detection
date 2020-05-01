@@ -6,9 +6,11 @@ from tqdm import tqdm
 import sys
 sys.path.append('test')
 from helper import compute_ts_road_map
+from validation import validation_loop
 
 def epoch_loop(param):
     for epoch in range(param['epochs']):
+        validation_loop(epoch, param)
         train_loop(epoch, param) 
         if epoch % 10 == 0:
             validation_loop(epoch, param)
@@ -86,62 +88,4 @@ def train(epoch, batch_i, batch, param):
         #                                             epoch, 
         #                                             batch_i), 
         #                outputs[0].detach().cpu().numpy() * 255)
-
-
-def validation_loop(epoch, param):
-    param['running_loss'] = 0.0 
-    for batch_i, batch in enumerate(tqdm(param['validation_loader'])):
-        validation(epoch, batch_i, batch, param)
-    print("Epoch: {}, Val loss: {}".format(epoch, param['running_loss'] / 
-                                       len(param['validation_loader'])))
-
-def validation(epoch, batch_i, batch, param):
-    with torch.no_grad():
-        outputs = None
-        if param['run_name'] != 'bbox_reg':
-            inputs, labels = batch 
-            inputs = inputs.to(param['device'])
-            labels = labels.to(param['device'])
-        else:
-            inputs, samples, labels = batch
-            inputs = inputs.to(param['device'])
-            labels = labels.to(param['device'])
-            samples = samples.to(param['device'])
-
-        if param['run_name'] == 'mosaic':
-            fusion_layer = param['model'][0].eval()
-            static_model = param['model'][1].eval()
-            fusion_outputs = fusion_layer(inputs)
-            outputs = static_model(fusion_outputs).squeeze(1)
-        elif param['run_name'] == 'polar':
-            static_polar = param['model'].eval()
-            outputs = static_polar(inputs.squeeze(1)).squeeze(1)
-        elif param['run_name'] in ['front','bbox']:
-            static_front = param['model'].eval()
-            outputs = static_front(inputs).squeeze(1)
-            for i in range(outputs.shape[0]):
-                ts = compute_ts_road_map(outputs[i], labels[i])
-                param['ts'] += ts
-        elif param['run_name'] in ['camerabased']:
-            inputs = inputs.view(-1, 256, 16, 20)
-            labels = labels.view(-1, 400, 538)
-            static_camerabased = param['model'].eval()
-            outputs = static_camerabased(inputs).squeeze(1)
-        elif param['run_name'] == 'bbox_reg':
-            camera_model = param['model'][0].train()
-            bbox_model = param['model'][1].train()
-            camera_feature = camera_model(inputs)
-            bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
-            camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1).view(-1, 32) # repeat to match num of bbox features
-            bbox_feature_positive = bbox_feature[labels.reshape(-1) == 1]
-            camera_feature_batch_positive = camera_feature_batch[labels.reshape(-1) == 1]
-            labels_positive = labels.reshape(-1)[labels.reshape(-1) == 1]
-
-
-        if param['run_name'] != "bbox_reg":
-            loss = param['criterion'](outputs, labels.float())
-        else:
-            loss = param['criterion'](camera_feature_batch_positive, bbox_feature_positive, labels_positive)
-        #loss = param['criterion'](outputs, labels.float())
-        param['running_loss'] += loss.item()
 

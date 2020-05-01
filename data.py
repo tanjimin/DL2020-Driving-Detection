@@ -117,9 +117,9 @@ class ObjectRegressionDataset(Dataset):
         self.front_only = front_only
         if front_only:
             self._filter_nonfront()
-            self.sampler = BboxGenerate(400, 538, 20, 45)
+            self.box_sampler= BboxGenerate(400, 538, 20, 45)
         else:
-            self.sampler = BboxGenerate(800, 800, 20, 45)
+            self.box_sampler = BboxGenerate(800, 800, 20, 45)
 
     def _filter_nonfront(self):
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_x'] >= 0) | (self.annotation_dataframe['fr_x'] >= 0)]
@@ -145,7 +145,7 @@ class ObjectRegressionDataset(Dataset):
         pos_samples = torch.as_tensor(corners).view(-1, 8).float()
 
         neg_num= 100 - pos_samples.shape[0]
-        neg_samples = torch.FloatTensor(self.sampler.sample(neg_num, label))
+        neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num, label))
         if self.front_only:
             neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
         else:
