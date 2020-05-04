@@ -36,6 +36,7 @@ class BboxGenerate():
         
         # loop over each picked indices
         # if any cornor is contained in the positive coordinates, remove from the picked indices
+        """
         for i in pick_idx:
             picked = self.bbox_gen[i, :]
             for coor in picked:
@@ -55,7 +56,7 @@ class BboxGenerate():
                         pick_idx_new.remove(i)
                         break
             pick_idx.extend(pick_idx_new)
-        
+        """
         # may have more indices than k stored in pick_idx
         # remove duplicates to get exactly k indices
         pick_bbox = self.bbox_gen[list(set(pick_idx)), :]

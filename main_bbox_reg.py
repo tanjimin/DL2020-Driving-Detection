@@ -15,7 +15,7 @@ import pandas as pd
 def set_flags(param):
     param['device'] = torch.device("cuda:0" if torch.cuda.is_available() 
                                             else "cpu")
-    param['epochs'] = 500
+    param['epochs'] = 2000
     param['run_name'] = 'bbox_reg'
 
 def main():
@@ -38,7 +38,8 @@ def init_data(param):
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=64, 
                                               shuffle=True, 
-                                              num_workers=0 )
+                                              num_workers=8,
+                                              pin_memory=True)
 
     param['train_loader'] = trainloader
 
@@ -47,7 +48,8 @@ def init_data(param):
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=32, 
                                               shuffle=True, 
-                                              num_workers=0)
+                                              num_workers=2,
+                                              pin_memory=True)
     param['validation_loader'] = validationloader
     
 def init_model(param):

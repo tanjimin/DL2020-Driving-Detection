@@ -12,7 +12,7 @@ from validation import validation_loop
 def epoch_loop(param):
     for epoch in range(param['epochs']):
         train_loop(epoch, param) 
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:
             validation_loop(epoch, param)
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
@@ -79,7 +79,7 @@ def train(epoch, batch_i, batch, param):
     param['optimizer'].step()
     param['running_loss'] += loss.item()
     
-    if epoch % 5 == 1 and batch_i % 100 == 1:
+    if epoch % 5 == 1 and batch_i % 100 == 1 and param['run_name'] != 'bbox_reg':
         print("Epoch {}, Loss: {}".format(epoch, param['running_loss'] / batch_i))
         sample_path = 'sample_output_{}'.format(param['run_name'])
         if not os.path.exists(sample_path): 
