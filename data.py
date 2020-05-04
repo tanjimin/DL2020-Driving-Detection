@@ -144,7 +144,7 @@ class ObjectRegressionDataset(Dataset):
         corners = data_entries[['bl_x', 'bl_y', 'fl_x', 'fl_y', 'br_x', 'br_y', 'fr_x','fr_y']].to_numpy()
         pos_samples = torch.as_tensor(corners).view(-1, 8).float()
 
-        neg_num= 100 - pos_samples.shape[0]
+        neg_num= 400 - pos_samples.shape[0]
         neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num, label))
         if self.front_only:
             neg_samples[:,:,1] = neg_samples[:,:,1] - 269 

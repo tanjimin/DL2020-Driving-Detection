@@ -36,7 +36,7 @@ def init_data(param):
     trainset = ObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", 
                                        "/beegfs/cy1355/obj_binary_roadmap_train/road_map",  "/beegfs/cy1355/data/annotation.csv", True)
     trainloader = torch.utils.data.DataLoader(trainset, 
-                                              batch_size=32, 
+                                              batch_size=64, 
                                               shuffle=True, 
                                               num_workers=0 )
 
