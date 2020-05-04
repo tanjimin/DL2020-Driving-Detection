@@ -67,7 +67,9 @@ class FrontObjectSegmentationDataset(Dataset):
     
         # data: (256, 16, 20)
         # label: (800, 800)
-        # data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
+        # if directly loading numpy, the camera orders are CHANGED
+        # orig data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
+        # now: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_RIGHT, CAM_BACK, CAM_BACK_LEFT
 
         # output label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
         label = torch.from_numpy(np.rot90(label[131:669,400:]).copy())
@@ -90,8 +92,6 @@ class CameraBasedLaneSegmentationDataset(Dataset):
         data = np.load(data_path)
         label = (np.load(label_path) * 1).astype(np.single)
         
-        # data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
-        # label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
         # label_processed: 6 * 400 * 538
         label_rot1 = ndimage.rotate(label, 30)
         label1 = label_rot1[547 - 400:547, 278: 278 + 538].copy()
