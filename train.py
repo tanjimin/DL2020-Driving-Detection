@@ -2,6 +2,7 @@ import os
 import cv2
 import torch
 from tqdm import tqdm
+import random
 
 import sys
 sys.path.append('test')
@@ -77,14 +78,17 @@ def train(epoch, batch_i, batch, param):
     loss.backward()
     param['optimizer'].step()
     param['running_loss'] += loss.item()
+    
     if epoch % 5 == 1 and batch_i % 100 == 1:
         print("Epoch {}, Loss: {}".format(epoch, param['running_loss'] / batch_i))
         sample_path = 'sample_output_{}'.format(param['run_name'])
-        #if not os.path.exists(sample_path): 
-        #    os.mkdir(sample_path)
-        #else:
-        #    cv2.imwrite('{}/sample_{}_{}.png'.format(sample_path, 
-        #                                             epoch, 
-        #                                             batch_i), 
-        #                outputs[0].detach().cpu().numpy() * 255)
+        if not os.path.exists(sample_path): 
+            os.mkdir(sample_path)
+        else:
+            rand_camera = random.randrange(0,outputs.shape[0])
+            cv2.imwrite('{}/sample_{}_{}_{}.png'.format(sample_path, 
+                                                    epoch, 
+                                                    batch_i,
+                                                    rand_camera), 
+                       outputs[rand_camera].detach().cpu().numpy() * 255)
 
