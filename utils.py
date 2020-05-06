@@ -18,7 +18,7 @@ class BboxGenerate():
                 left_bottom = [i, j + self.car_height]
                 right_top = [i + self.car_width, j]
                 right_bottom = [i + self.car_width, j + self.car_height]
-                if j + self.car_height >= 800 or i + self.car_width >= 800:
+                if j + self.car_height >= self.roadmap_height or i + self.car_width >= self.roadmap_width:
                     break
                 else:
                     box = np.array([left_top, right_top, left_bottom, right_bottom])
