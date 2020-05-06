@@ -98,8 +98,8 @@ class CameraBasedLaneSegmentationDataset(Dataset):
         label4 = label_rot1[547:547+400, 278: 278 + 538][::-1,::-1].copy()
 
         label_rot2 = ndimage.rotate(label, -30)
-        label3 = label_rot2[547-400:547, 278: 278 + 538 ].copy()
-        label6 = label_rot2[547:547+400, 278: 278 + 538 ][::-1,::-1].copy()
+        label6 = label_rot2[547-400:547, 278: 278 + 538 ].copy()
+        label3 = label_rot2[547:547+400, 278: 278 + 538 ][::-1,::-1].copy()
 
         label2 = np.rot90(label[131:669,400:]).copy()
         label5 = np.rot90(label[131:669, :400][::-1,::-1]).copy()
