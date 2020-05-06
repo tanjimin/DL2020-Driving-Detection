@@ -14,7 +14,7 @@ def focal_loss(y_pred, y_true, alpha = 0.25, gamma = 2, reduction = 'mean'):
     y_pred = torch.clamp(y_pred, 1e-4, 1.0 - 1e-4)
 
     ce_loss = F.binary_cross_entropy(y_pred, y_true, reduction="none")
-    p_t = y_pred * y_true + (1 - y_pred) * (1 - y_true)
+    p_t = 1 * y_pred * y_true + (1 - y_pred) * (1 - y_true)
     focal_loss = ce_loss * ((1 - p_t) ** gamma)
 
     if alpha >= 0:
