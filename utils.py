@@ -68,21 +68,31 @@ def concat_cameras(outputs):
     back_left = outputs[:,5,:]
 
     rot_axes = (2,1)
-    front_rot = torch.tensor(ndimage.rotate(front, -90, axes = rot_axes))
-    back_rot = torch.tensor(ndimage.rotate(back, 90, axes = rot_axes))
-    front_left_rot = torch.tensor(ndimage.rotate(front_left, -30, axes = rot_axes, reshape = False))
-    back_left_rot = torch.tensor(ndimage.rotate(back_left, 30, axes = rot_axes, reshape = False))
-    front_right_rot = torch.tensor(ndimage.rotate(front_right, -120, axes = rot_axes, reshape = False))
-    back_right_rot = torch.tensor(ndimage.rotate(back_right, 120, axes = rot_axes, reshape = False))
 
-    init_out = torch.zeros(batch_n, 800,800)
-    init_out[:,131:131+538, :400] += back_rot.clone()
-    init_out[:,131:131+538, 400:] += front_rot.clone()
+    init_out = np.zeros(batch_n, 800,800)
+    # rotate counter-clockwise
+    # assign front left and back right cameras
+    # then rotate clockwise back and crop out 800*800
+    init_out = ndimage.rotate(init_out, 30, axes = rot_axes)
+    init_out[:, 547 - 400:547, 278: 278 + 538] = front_left.copy()
+    init_out[:, 547:547+400, 278: 278 + 538][::-1,::-1] = back_right.copy()
+    init_out = ndimage.rotate(init_out, -30, axes = rot_axes)
+    init_out = init_out[:, 347:347+800, 347:347+800]
 
-    init_out[:, :131, :400] += back_left_rot[:, :131,:400].clone()
-    init_out[:, :131, 400:] += front_left_rot[:, :131,138:].clone()
-    init_out[:, 669:, :400] += back_right_rot[:, 269:,:400].clone()
-    init_out[:, 669:, 400:] += front_right_rot[:, 269:,138:].clone()
+    # rotate clockwise
+    # assign front right and back right cameras
+    # then rotate counter-clockwise back and crop out 800*800
+    init_out = ndimage.rotate(init_out, -30, axes = rot_axes)
+    init_out[:, 547-400:547, 278: 278 + 538 ] = back_left.copy()
+    init_out[:, 547:547+400, 278: 278 + 538 ][::-1,::-1] = front_right.copy()
+    init_out = ndimage.rotate(init_out, 30, axes = rot_axes)
+    init_out = init_out[:, 347:347+800, 347:347+800]
+
+    # inverse the process for front/back as well
+    init_out[:, 131:131+538, 400:] = ndimage.rotate(front, -90, axes = rot_axes)
+    init_out[:, 131:131+538, :400][::-1,::-1] = ndimage.rotate(back, -90, axes = rot_axes)
+
+    init_out = torch.tensor(init_out)
 
     return init_out
 
