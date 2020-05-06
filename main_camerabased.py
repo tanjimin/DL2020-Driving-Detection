@@ -47,6 +47,8 @@ def init_data(param):
     param['validation_loader'] = validationloader
 def init_model(param):
     model = FrontStaticModel().to(param['device'])
+    # model = torch.load('./static_camerabased_100')
+    # print('*** Model loads successfully ***')
     param['model'] = model
 
 def init_optimizers(param):

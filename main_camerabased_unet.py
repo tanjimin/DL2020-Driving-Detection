@@ -6,14 +6,14 @@ import torchvision
 import torchvision.transforms as transforms
 from train import epoch_loop 
 from data import LaneSegmentationDataset
-from model import FrontStaticModel, FusionSixCameras
+from model import FrontStaticModel, UNet
 
 # Setting initial parameters for training
 def set_flags(param):
     param['device'] = torch.device("cuda:0" if torch.cuda.is_available() 
                                             else "cpu")
     param['epochs'] = 5000
-    param['run_name'] = 'camerabased_full'
+    param['run_name'] = 'camerabased_unet'
     
 
 def main():
@@ -30,7 +30,7 @@ def init_loggers(param):
 
 def init_data(param):
     
-    batch_size_n = 64
+    batch_size_n = 2
 
     trainset = LaneSegmentationDataset("/beegfs/cy1355/camera_tensor_train/image_tensor", "/beegfs/cy1355/camera_tensor_train/road_map")
     trainloader = torch.utils.data.DataLoader(trainset, 
@@ -46,7 +46,8 @@ def init_data(param):
                                               num_workers=0)
     param['validation_loader'] = validationloader
 def init_model(param):
-    fusion = FusionSixCameras().to(param['device'])
+
+    fusion = UNet(n_channels=1, n_classes=1, bilinear=True).to(param['device'])
     model = FrontStaticModel().to(param['device'])
     model = torch.load('./static_camerabased_100')
     print('*** Model loads successfully ***')

@@ -153,7 +153,7 @@ class ObjectRegressionDataset(Dataset):
             neg_samples[:,:,0] = neg_samples[:,:,0] - 400
         neg_samples = neg_samples.view(-1,8)
         samples = torch.cat([pos_samples, neg_samples], 0)
-        target = torch.cat([torch.ones(pos_samples.shape[0]), -1 * torch.ones(neg_num)]).float()
+        target = torch.cat([torch.ones(pos_samples.shape[0]), torch.zeros(neg_num)]).float()
         # data: (256, 16, 20)
         # samples: (n = 100, 8)
         # target: 1000

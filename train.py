@@ -13,7 +13,8 @@ from utils import *
 def epoch_loop(param):
     for epoch in range(param['epochs']):
         train_loop(epoch, param) 
-        if epoch % 50 == 0:
+        print("Epoch {}, Train Loss: {}".format(epoch, param['running_loss'] / len(param['train_loader'])))
+        if epoch % 5 == 0:
             validation_loop(epoch, param)
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
@@ -80,10 +81,11 @@ def train(epoch, batch_i, batch, param):
     elif param['run_name'] == 'bbox_reg':
         camera_model = param['model'][0].train()
         bbox_model = param['model'][1].train()
-        camera_feature = camera_model(inputs)
+        classifier = param['model'][2].train()
+        camera_feature = camera_model(inputs).unsqueeze(1)
         bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
-        camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1).view(-1, 32) # repeat to match num of bbox features
-        #print(camera_feature_batch.shape, )
+        camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1) # repeat to match num of bbox features
+        outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1])
 
     elif param['run_name'] == 'camerabased_full':
         inputs = inputs.view(-1, 256, 16, 20)
@@ -106,6 +108,7 @@ def train(epoch, batch_i, batch, param):
         static_camerabased = param['model'][0]
         unet_cameras = param['model'][1].train()
         
+
         # [batch*6, 400, 538]
         outputs_cameras = static_camerabased(inputs).squeeze(1)
         # [batch, 6, 400, 538]
@@ -115,16 +118,13 @@ def train(epoch, batch_i, batch, param):
         # [batch, 800, 800]
         outputs = unet_cameras(unet_input).squeeze(1)
 
-    if param['run_name'] != "bbox_reg":
-        loss = param['criterion'](outputs, labels.float())
-    else:
-        loss = param['criterion'](camera_feature_batch, bbox_feature, labels.view(-1,1))
+    loss = param['criterion'](outputs, labels.float())
+
     loss.backward()
     param['optimizer'].step()
     param['running_loss'] += loss.item()
     
     if epoch % 5 == 1 and batch_i % 100 == 1 and param['run_name'] != 'bbox_reg':
-        print("Epoch {}, Loss: {}".format(epoch, param['running_loss'] / batch_i))
         sample_path = 'sample_output_{}'.format(param['run_name'])
         if not os.path.exists(sample_path): 
             os.mkdir(sample_path)

@@ -152,6 +152,47 @@ class FrontDynamicModel(nn.Module):
         out: Flattened representations   batch * (H*W) * C'
     """
     def __init__(self):
+        super(FrontDynamicModel, self).__init__()
+
+        self.deconv1 = nn.Sequential(
+                        nn.ConvTranspose2d(256, 64, 5, 2, 0),
+                        nn.BatchNorm2d(64),
+                        nn.ReLU())
+
+        self.deconv2 = nn.Sequential(
+                        nn.ConvTranspose2d(64, 16, 3, 1, 0),
+                        nn.BatchNorm2d(16),
+                        nn.ReLU())
+
+        self.deconv3 = nn.Sequential(
+                        nn.ConvTranspose2d(16, 8, 3, 1, 0),
+                        nn.BatchNorm2d(8),
+                        nn.ReLU())
+        
+        self.deconv4 = nn.Sequential(
+                        nn.ConvTranspose2d(8, 8, 3, 1, 0),
+                        nn.BatchNorm2d(8),
+                        nn.ReLU())
+
+        self.fc = nn.Linear(16072, 1024)
+
+    def forward(self, inputs):
+        """
+        Inputs:
+            inputs: batch * C * H * W. currently 6 * 256 * 16 * 20
+        Outputs:
+            out: batch * 1 * 400 * 538
+        """
+        
+        out = self.deconv1(inputs)
+        out = self.deconv2(out)
+        out = self.deconv3(out)
+        out = self.deconv4(out)
+        out = self.fc(out.view(-1, 16072))
+        return out
+
+    """    
+    def __init__(self):
         super(FrontDynamicModel, self).__init__() 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.projection_original_features = nn.Linear(256, 32)
@@ -162,7 +203,36 @@ class FrontDynamicModel(nn.Module):
         out = torch.flatten(out, 1)
         out = self.projection_original_features(out)
         return out
+    """
+class BoundingBoxClassifier(nn.Module):
+    """
+    Inputs:
+        inputs: Image representations   batch * C * H * W. currently 6 * 256 * 16 * 20 
+    Ouputs:
+        out: Flattened representations   batch * (H*W) * C'
+    """
+    def __init__(self):
+        super(BoundingBoxClassifier, self).__init__()
 
+        self.encoder = nn.Sequential(
+                        nn.Linear(1024 + 32, 64),
+                        nn.BatchNorm1d(64),
+                        nn.ReLU(),
+                        nn.Linear(64, 1),
+                        nn.Sigmoid())
+                       
+
+    def forward(self, camera, bbox):
+        """
+        Inputs:
+            camera: batch * H (currently n * 1024) 
+            bbox: batch * H (currently n * 32)
+        Outputs:
+            out: batch * 1 * 400 * 538
+        """
+        inputs = torch.cat((camera, bbox), dim = 1)
+        out = self.encoder(inputs)
+        return out
 
 class BoundingBoxEncoder(nn.Module):
     """
