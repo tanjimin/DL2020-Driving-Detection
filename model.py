@@ -192,10 +192,10 @@ class FusionSixCameras(nn.Module):
                         nn.BatchNorm2d(2),
                         nn.ReLU())
 
-        self.conv2 = nn.Sequential(
-                        nn.Conv2d(in_channels = 2, out_channels = 2, \
-                                  kernel_size = 5, stride = (1,4), padding = 2),
-                        nn.ReLU())
+        # self.conv2 = nn.Sequential(
+        #                 nn.Conv2d(in_channels = 2, out_channels = 2, \
+        #                           kernel_size = 5, stride = (1,4), padding = 2),
+        #                 nn.ReLU())
 
         self.deconv3 = nn.Sequential(
                         nn.ConvTranspose2d(in_channels = 2, out_channels = 1, \
@@ -211,7 +211,7 @@ class FusionSixCameras(nn.Module):
         """
         
         out = self.deconv1(inputs)
-        out = self.conv2(out)
+        out = nn.functional.max_pool2d(out, (1,4))
         out = self.deconv3(out)
         return out
 
