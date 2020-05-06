@@ -59,6 +59,20 @@ def validation(epoch, batch_i, batch, param):
             labels_positive = labels.reshape(-1)[labels.reshape(-1) == 1]
             gen_bbox_heatmap(param, graph, camera_feature, epoch, batch_i)
 
+        elif param['run_name'] == 'camerabased_full':
+            
+            inputs = inputs.view(-1, 256, 16, 20)
+            labels = labels.view(-1, 800, 800)
+
+            static_camerabased = param['model'][0]
+            fusion_cameras = param['model'][1].eval()
+            
+            # [batch*6, 400, 538]
+            outputs_cameras = static_camerabased(inputs).squeeze(1)
+            # [batch, 6, 400, 538]
+            outputs_cameras = outputs_cameras.view(-1, 6, 400, 538)
+            # [batch, 800, 800]
+            outputs = fusion_cameras(outputs_cameras).squeeze(1)
 
         if param['run_name'] != "bbox_reg":
             loss = param['criterion'](outputs, labels.float())
