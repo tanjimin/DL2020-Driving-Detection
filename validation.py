@@ -98,6 +98,18 @@ def validation(epoch, batch_i, batch, param):
 
         param['running_loss'] += loss.item()
 
+        if epoch % 5 == 0 and batch_i % 100 == 1 and param['run_name'] != 'bbox_reg':
+            sample_path = 'sample_output_{}'.format(param['run_name'])
+            if not os.path.exists(sample_path): 
+                os.mkdir(sample_path)
+            else:
+                rand_camera = random.randrange(0,outputs.shape[0])
+                cv2.imwrite('{}/val_sample_{}_{}_{}.png'.format(sample_path, 
+                                                    epoch, 
+                                                    batch_i,
+                                                    rand_camera), 
+                       outputs[rand_camera].detach().cpu().numpy() * 255)
+
 def gen_bbox_heatmap(param, ground_truth, camera_feature, epoch, batch):
     camera_feature = camera_feature[:, 0, :]
     batch_size = camera_feature.shape[0]
