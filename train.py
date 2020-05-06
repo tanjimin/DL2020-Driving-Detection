@@ -8,6 +8,7 @@ import sys
 sys.path.append('test')
 from helper import compute_ts_road_map
 from validation import validation_loop
+from utils import *
 
 def epoch_loop(param):
     for epoch in range(param['epochs']):
@@ -17,8 +18,7 @@ def epoch_loop(param):
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
                 os.mkdir(save_path)
-                torch.save(param['model'][1], 
-                            '{}/FusionSixCameras_{}'.format(save_path, epoch))
+
             else:
                 if param['run_name'] == 'mosaic':
                     torch.save(param['model'][0], 
@@ -31,6 +31,9 @@ def epoch_loop(param):
                 elif param['run_name'] in ['camerabased_full']:
                     torch.save(param['model'][1], 
                             '{}/FusionSixCameras_{}'.format(save_path, epoch))
+                elif param['run_name'] in ['camerabased_unet']:
+                    torch.save(param['model'][1], 
+                            '{}/FusionUnet_{}'.format(save_path, epoch))
                 else:
                     raise Error("Param['run name'] not found. Model cannot be saved.")
 
@@ -95,7 +98,23 @@ def train(epoch, batch_i, batch, param):
         outputs_cameras = outputs_cameras.view(-1, 6, 400, 538)
         # [batch, 800, 800]
         outputs = fusion_cameras(outputs_cameras).squeeze(1)
+
+    elif param['run_name'] == 'camerabased_unet':
+        inputs = inputs.view(-1, 256, 16, 20)
+        labels = labels.view(-1, 800, 800)
+
+        static_camerabased = param['model'][0]
+        unet_cameras = param['model'][1].train()
         
+        # [batch*6, 400, 538]
+        outputs_cameras = static_camerabased(inputs).squeeze(1)
+        # [batch, 6, 400, 538]
+        outputs_cameras = outputs_cameras.view(-1, 6, 400, 538)
+        # [batch, 1, 800, 800]
+        unet_input = concat_cameras(outputs_cameras.cpu().numpy()).unsqueeze(1).to(param['device'])
+        # [batch, 800, 800]
+        outputs = unet_cameras(unet_input).squeeze(1)
+
     if param['run_name'] != "bbox_reg":
         loss = param['criterion'](outputs, labels.float())
     else:
