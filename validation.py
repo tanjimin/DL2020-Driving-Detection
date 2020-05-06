@@ -57,11 +57,26 @@ def validation(epoch, batch_i, batch, param):
             camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1).view(-1, 1024) # repeat to match num of bbox features
             bbox_feature_positive = bbox_feature[labels.reshape(-1) == 1]
             camera_feature_batch_positive = camera_feature_batch[labels.reshape(-1) == 1]
-            labels_positive = labels.reshape(-1)[labels.reshape(-1) == 1]
+            labels= labels.reshape(-1)[labels.reshape(-1) == 1]
             outputs = classifier(camera_feature_batch_positive, bbox_feature_positive).squeeze(1)
             gen_bbox_heatmap(param, graph, camera_feature, epoch, batch_i)
 
-        loss = param['criterion'](outputs, labels_positive.float())
+        elif param['run_name'] == 'camerabased_full':
+            
+            inputs = inputs.view(-1, 256, 16, 20)
+            labels = labels.view(-1, 800, 800)
+
+            static_camerabased = param['model'][0]
+            fusion_cameras = param['model'][1].eval()
+            
+            # [batch*6, 400, 538]
+            outputs_cameras = static_camerabased(inputs).squeeze(1)
+            # [batch, 6, 400, 538]
+            outputs_cameras = outputs_cameras.view(-1, 6, 400, 538)
+            # [batch, 800, 800]
+            outputs = fusion_cameras(outputs_cameras).squeeze(1)
+
+        loss = param['criterion'](outputs, labels.float())
         param['running_loss'] += loss.item()
 
 def gen_bbox_heatmap(param, ground_truth, camera_feature, epoch, batch):

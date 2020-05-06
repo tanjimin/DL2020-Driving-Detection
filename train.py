@@ -18,6 +18,8 @@ def epoch_loop(param):
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
                 os.mkdir(save_path)
+                torch.save(param['model'][1], 
+                            '{}/FusionSixCameras_{}'.format(save_path, epoch))
             else:
                 if param['run_name'] == 'mosaic':
                     torch.save(param['model'][0], 
@@ -27,6 +29,9 @@ def epoch_loop(param):
                 elif param['run_name'] in ['polar', 'front', 'camerabased', 'bbox','bbox_reg']:
                     torch.save(param['model'], 
                             '{}/static_{}_{}'.format(save_path, param['run_name'], epoch))
+                elif param['run_name'] in ['camerabased_full']:
+                    torch.save(param['model'][1], 
+                            '{}/FusionSixCameras_{}'.format(save_path, epoch))
                 else:
                     raise Error("Param['run name'] not found. Model cannot be saved.")
 
@@ -36,8 +41,14 @@ def train_loop(epoch, param):
         train(epoch, batch_i, batch, param)
 
 def train(epoch, batch_i, batch, param):
+    # if param['run_name'] != 'camerabased_full':
+    #     param['optimizer'].zero_grad()
+    # elif param['run_name'] == 'camerabased_full':
+    #     param['optimizer'][0].zero_grad()
+    #     param['optimizer'][1].zero_grad()
     param['optimizer'].zero_grad()
     outputs = None
+    
     if param['run_name'] != 'bbox_reg':
         inputs, labels = batch 
         inputs = inputs.to(param['device'])
@@ -72,6 +83,20 @@ def train(epoch, batch_i, batch, param):
         bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
         camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1) # repeat to match num of bbox features
         outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1])
+
+    elif param['run_name'] == 'camerabased_full':
+        inputs = inputs.view(-1, 256, 16, 20)
+        labels = labels.view(-1, 800, 800)
+
+        static_camerabased = param['model'][0]
+        fusion_cameras = param['model'][1].train()
+        
+        # [batch*6, 400, 538]
+        outputs_cameras = static_camerabased(inputs).squeeze(1)
+        # [batch, 6, 400, 538]
+        outputs_cameras = outputs_cameras.view(-1, 6, 400, 538)
+        # [batch, 800, 800]
+        outputs = fusion_cameras(outputs_cameras).squeeze(1)
         
     loss = param['criterion'](outputs, labels.float())
     loss.backward()

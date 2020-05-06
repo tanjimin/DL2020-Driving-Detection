@@ -252,6 +252,40 @@ class BoundingBoxEncoder(nn.Module):
         return out.squeeze()
 
 
+class FusionSixCameras(nn.Module):
+    def __init__(self):
+        super(FusionSixCameras, self).__init__()
+
+        self.deconv1 = nn.Sequential(
+                        nn.ConvTranspose2d(in_channels = 6, out_channels = 2, \
+                                           kernel_size = 6, stride = 2, padding = 2),
+                        nn.BatchNorm2d(2),
+                        nn.ReLU())
+
+        # self.conv2 = nn.Sequential(
+        #                 nn.Conv2d(in_channels = 2, out_channels = 2, \
+        #                           kernel_size = 5, stride = (1,4), padding = 2),
+        #                 nn.ReLU())
+
+        self.deconv3 = nn.Sequential(
+                        nn.ConvTranspose2d(in_channels = 2, out_channels = 1, \
+                                           kernel_size = (5,4), stride = (1,3), padding = (2,4)),
+                        nn.Sigmoid())
+
+    def forward(self, inputs):
+        """
+        Inputs:
+            inputs: batch * 6 * 400 * 538
+        Outputs:
+            out: batch * 1 * 800 * 800
+        """
+        
+        out = self.deconv1(inputs)
+        out = nn.functional.max_pool2d(out, (1,4))
+        out = self.deconv3(out)
+        return out
+
+
 # class BoundingBoxDecoder(nn.Module):
 #     """
 #     Inputs:
