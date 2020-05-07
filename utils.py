@@ -92,10 +92,44 @@ def concat_cameras(outputs):
     init_out[:, 131:131+538, 400:] += ndimage.rotate(front, -90, axes = rot_axes)
     init_out[:, 131:131+538, :400] += ndimage.rotate(back[:, ::-1,::-1], -90, axes = rot_axes)
 
-    init_out = torch.tensor(init_out)
+    init_out = torch.FloatTensor(init_out)
 
     return init_out
 
+def reorder_tensor(tensor, device):
+    '''
+    Input/Output tensor shape: [batch_size, 6(images per sample), 3, H, W]
+    
+    Original
+    image_names = [
+    'CAM_FRONT_LEFT.jpeg',
+    'CAM_FRONT.jpeg',
+    'CAM_FRONT_RIGHT.jpeg',
+    'CAM_BACK_LEFT.jpeg',
+    'CAM_BACK.jpeg',
+    'CAM_BACK_RIGHT.jpeg',
+    ]
+    
+    Output
+    image_names = [
+    'CAM_FRONT_LEFT.jpeg',
+    'CAM_FRONT.jpeg',
+    'CAM_FRONT_RIGHT.jpeg',
+    'CAM_BACK_RIGHT.jpeg',
+    'CAM_BACK.jpeg',
+    'CAM_BACK_LEFT.jpeg'
+    ]
+    '''
+    out_tensor = torch.zeros(tensor.shape).to(device)
+    
+    out_tensor[:,0,:] = tensor[:,0,:]
+    out_tensor[:,1,:] = tensor[:,1,:]
+    out_tensor[:,2,:] = tensor[:,2,:]
+    out_tensor[:,3,:] = tensor[:,5,:]
+    out_tensor[:,4,:] = tensor[:,4,:]
+    out_tensor[:,5,:] = tensor[:,3,:]
+    
+    return out_tensor
 
 if __name__ == "__main__":
     # 800 * 800
