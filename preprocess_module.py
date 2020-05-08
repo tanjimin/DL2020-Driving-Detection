@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if cuda else "cpu")
 
-def reorder_tensor(tensor):
+def reorder_tensor(tensor, device):
     '''
     Input/Output tensor shape: [batch_size, 6(images per sample), 3, H, W]
     
@@ -38,7 +38,7 @@ def reorder_tensor(tensor):
     'CAM_BACK_LEFT.jpeg'
     ]
     '''
-    out_tensor = torch.zeros(tensor.shape)
+    out_tensor = torch.zeros(tensor.shape).to(device)
     
     out_tensor[:,0,:] = tensor[:,0,:]
     out_tensor[:,1,:] = tensor[:,1,:]

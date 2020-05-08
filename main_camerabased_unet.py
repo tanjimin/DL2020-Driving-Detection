@@ -49,7 +49,7 @@ def init_model(param):
 
     fusion = UNet(n_channels=1, n_classes=1, bilinear=True).to(param['device'])
     model = FrontStaticModel().to(param['device'])
-    model = torch.load('./static_camerabased_100')
+    model = torch.load('./static_camerabased_20')
     print('*** Model loads successfully ***')
     
     for param_ in model.parameters():
@@ -64,7 +64,7 @@ def init_optimizers(param):
     parameters_fusion = param['model'][1].parameters()
 
     # optimizer = optim.SGD(parameters, lr=0.00005, momentum=0.9)
-    optimizer_fusion = optim.SGD(parameters_fusion, lr=0.001, momentum=0.9)
+    optimizer_fusion = optim.SGD(parameters_fusion, lr=0.005, momentum=0.9)
 
     param['criterion'] = criterion
     # param['optimizer'] = (optimizer, optimizer_fusion)
