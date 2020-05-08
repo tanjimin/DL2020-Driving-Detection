@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 from scipy import misc, ndimage
 from torch.utils.data import Dataset
 from utils import BboxGenerate
+from preprocess_module import main_binary_roadmap_objdetection
 
 class LaneSegmentationDataset(Dataset):
     
@@ -117,15 +118,15 @@ class ObjectRegressionDataset(Dataset):
         self.front_only = front_only
         if front_only:
             self._filter_nonfront()
-            self.box_sampler= BboxGenerate(400, 538, 20, 45)
+            self.box_sampler= BboxGenerate(538, 400, 20, 45)
         else:
             self.box_sampler = BboxGenerate(800, 800, 20, 45)
 
     def _filter_nonfront(self):
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_x'] >= 0) | (self.annotation_dataframe['fr_x'] >= 0)]
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_x'] >= 0) | (self.annotation_dataframe['br_x'] >= 0)]
-        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_y'].abs() <= 269) | (self.annotation_dataframe['fr_y'].abs() <= 269)]
-        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_y'].abs() <= 269) | (self.annotation_dataframe['br_y'].abs() <= 269)]
+        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_y'].abs() <= 26.9) | (self.annotation_dataframe['fr_y'].abs() <= 26.9)]
+        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_y'].abs() <= 26.9) | (self.annotation_dataframe['br_y'].abs() <= 26.9)]
 
     def __len__(self):
         return len(self.data_names)
@@ -151,7 +152,7 @@ class ObjectRegressionDataset(Dataset):
         else:
             neg_samples[:,:,1] = neg_samples[:,:,1] - 400
             neg_samples[:,:,0] = neg_samples[:,:,0] - 400
-        neg_samples = neg_samples.view(-1,8)
+        neg_samples = neg_samples.view(-1,8) / 10
         samples = torch.cat([pos_samples, neg_samples], 0)
         target = torch.cat([torch.ones(pos_samples.shape[0]), torch.zeros(neg_num)]).float()
         # data: (256, 16, 20)
@@ -166,15 +167,84 @@ class ObjectRegressionDataset(Dataset):
         else:
             return data, samples, target, label
 
+class ObjectDetectionDataset(Dataset):
+    
+    def __init__(self, data_dir, label_dir, annotation_file, front_only = False):
+        self.data_dir = data_dir
+        self.label_dir = label_dir
+        self.data_names = sorted(os.listdir(data_dir))
+        self.annotation_dataframe = pd.read_csv(annotation_file, encoding='utf-8')
+        self.front_only = front_only
+        if front_only:
+            self._filter_nonfront()
+            self.box_sampler= BboxGenerate(400, 538, 20, 45)
+        else:
+            self.box_sampler = BboxGenerate(800, 800, 20, 45)
+
+    def _filter_nonfront(self):
+        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_x'] >= 0) | (self.annotation_dataframe['fr_x'] >= 0)]
+        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_x'] >= 0) | (self.annotation_dataframe['br_x'] >= 0)]
+        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_y'].abs() <= 269) | (self.annotation_dataframe['fr_y'].abs() <= 269)]
+        self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_y'].abs() <= 269) | (self.annotation_dataframe['br_y'].abs() <= 269)]
+
+    def __len__(self):
+        return len(self.data_names)
+
+    def __getitem__(self, idx):
+        data_path = os.path.join(self.data_dir, self.data_names[idx])
+        data = np.load(data_path)
+        label_path = os.path.join(self.label_dir, self.data_names[idx])
+        label = (np.load(label_path) * 1).astype(np.single)
+        if self.front_only:
+            label = label[131:669,400:]
+    
+        id_list = self.data_names[idx].split('_')
+        scene_id, sample_id = int(id_list[1]), int(id_list[-1].split('.')[0])
+        data_entries = self.annotation_dataframe[(self.annotation_dataframe['scene'] == scene_id) & (self.annotation_dataframe['sample'] == sample_id)]
+        corners = data_entries[['bl_x', 'fl_x', 'br_x', 'fr_x', 'bl_y', 'fl_y', 'br_y','fr_y']].to_numpy()
+        pos_samples = torch.as_tensor(corners).view(-1, 8).float()
+        neg_num= 100 - pos_samples.shape[0]
+        neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num, label))
+        if self.front_only:
+            neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
+        else:
+            neg_samples[:,:,1] = neg_samples[:,:,1] - 400
+            neg_samples[:,:,0] = neg_samples[:,:,0] - 400
+        neg_samples = neg_samples.view(-1,8) / 10
+        samples = torch.cat([pos_samples, neg_samples], 0)
+        #import pdb; pdb.set_trace()
+        sample_pixels = [] 
+        for sample_idx in range(samples.shape[0]):
+            sample = samples[sample_idx].view(1, 2, 4)
+            print(sample)
+            image = main_binary_roadmap_objdetection(sample.view(1,2,4)) 
+            image = np.rot90(image[131:669,400:])
+            sample_pixels.append(image)
+        samples =  np.append(None, sample_pixels, axis = 0)
+
+        import cv2
+        cv2.imwrite('sample.png', image * 255)
+        import pdb; pdb.set_trace()
+        target = torch.cat([torch.ones(pos_samples.shape[0]), torch.zeros(neg_num)]).float()
+        # data: (256, 16, 20)
+        # samples: (n = 100, 8)
+        # target: 1000
+        # data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
+
+        # output label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
+        #print(data.shape, samples.shape, target.shape)
+        if self.front_only:
+            return data[1,:], samples, target, label
+        else:
+            return data, samples, target, label
+
 if __name__ == "__main__":
-    image_path = "/beegfs/cy1355/obj_binary_roadmap_train/image_tensor"
+    image_path = "/beegfs/jt3545/data/detection/train/image_tensor"
     annotation_path = "/beegfs/cy1355/data/annotation.csv"
     #label_path =  "/beegfs/cy1355/obj_binary_roadmap_train/road_map"
 
     # train_loader = FrontObjectSegmentationDataset(image_path, label_path)
     # for data, label in iter(train_loader):
     #     assert (label.shape[0] == 400) & (label.shape[1] == 538)
-    train_loader = ObjectRegressionDataset(image_path, annotation_path, True)
-    for data, label in iter(train_loader):
-        print(label.shape)
-
+    train_loader = ObjectDetectionDataset(image_path,"/beegfs/cy1355/obj_binary_roadmap_train/road_map", annotation_path, True)
+    data = train_loader[150]
