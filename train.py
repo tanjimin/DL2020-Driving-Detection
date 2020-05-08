@@ -3,6 +3,7 @@ import cv2
 import torch
 from tqdm import tqdm
 import random
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('test')
@@ -14,7 +15,7 @@ def epoch_loop(param):
     for epoch in range(param['epochs']):
         train_loop(epoch, param) 
         print("Epoch {}, Train Loss: {}".format(epoch, param['running_loss'] / len(param['train_loader'])))
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             validation_loop(epoch, param)
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
@@ -57,7 +58,7 @@ def train(epoch, batch_i, batch, param):
         inputs = inputs.to(param['device'])
         labels = labels.to(param['device'])
     else:
-        inputs, samples, labels, _ = batch
+        inputs, samples, labels, graph = batch
         inputs = inputs.to(param['device'])
         labels = labels.to(param['device'])
         samples = samples.to(param['device'])
@@ -86,6 +87,8 @@ def train(epoch, batch_i, batch, param):
         bbox_feature = bbox_model(samples.view(-1, 8)) # Batched bbox
         camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1) # repeat to match num of bbox features
         outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1])
+        if batch_i % 500 == 0:
+            gen_bbox_heatmap_train(param, graph, camera_feature, epoch, batch_i)
 
     elif param['run_name'] == 'camerabased_full':
         inputs = inputs.view(-1, 256, 16, 20)
@@ -134,4 +137,30 @@ def train(epoch, batch_i, batch, param):
                                                     batch_i,
                                                     rand_camera), 
                        outputs[rand_camera].detach().cpu().numpy() * 255)
+
+def gen_bbox_heatmap_train(param, ground_truth, camera_feature, epoch, batch):
+    camera_feature = camera_feature[:, 0, :]
+    batch_size = camera_feature.shape[0]
+    all_bbox = param['train_loader'].dataset.box_sampler.get_bbox().copy()
+    all_bbox[:,:,1] = all_bbox[:,:,1] - 269 
+    all_bbox_coord = all_bbox.mean(axis = 1)
+    all_bbox_size = all_bbox.shape[0]
+    bbox_model = param['model'][1].eval()
+    classifier = param['model'][2].eval()
+    model_input = torch.LongTensor(all_bbox).view(-1, 8).to(param['device']) / 10
+    bbox_feature = bbox_model(model_input.float())
+    for camera_batch in range(camera_feature.shape[0]):
+        camera_batches = camera_feature[camera_batch].unsqueeze(0).repeat(all_bbox_size, 1)
+        pred = classifier(camera_batches, bbox_feature).squeeze(1)
+        max_value = pred.max().item()
+        min_value = pred.min().item()
+        fig, ax = plt.subplots()
+        ax.scatter(all_bbox_coord[:, 0], all_bbox_coord[:, 1], c = pred.detach().cpu().numpy(), s = 1, edgecolor='')
+        ax.set_aspect('equal')
+        img_dir = 'bbox_imgs'
+        if not os.path.exists(img_dir): os.mkdir(img_dir)
+        plt.savefig('{}/train_img_{}_{}_max{}_min{}.png'.format(img_dir, epoch, batch, max_value, min_value))
+        plt.close()
+        cv2.imwrite('{}/train_img_{}_{}_label.png'.format(img_dir, epoch, batch), ground_truth[camera_batch].numpy() * 255)
+        break
 

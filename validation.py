@@ -128,6 +128,7 @@ def gen_bbox_heatmap(param, ground_truth, camera_feature, epoch, batch):
         min_value = pred.min().item()
         fig, ax = plt.subplots()
         ax.scatter(all_bbox_coord[:, 0], all_bbox_coord[:, 1], c = pred.detach().cpu().numpy(), s = 1, edgecolor='')
+        ax.set_aspect('equal')
         img_dir = 'bbox_imgs'
         if not os.path.exists(img_dir): os.mkdir(img_dir)
         plt.savefig('{}/test_img_{}_{}_max{}_min{}.png'.format(img_dir, epoch, batch, max_value, min_value))

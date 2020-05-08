@@ -143,7 +143,11 @@ class ObjectRegressionDataset(Dataset):
         scene_id, sample_id = int(id_list[1]), int(id_list[-1].split('.')[0])
         data_entries = self.annotation_dataframe[(self.annotation_dataframe['scene'] == scene_id) & (self.annotation_dataframe['sample'] == sample_id)]
         corners = data_entries[['bl_x', 'bl_y', 'fl_x', 'fl_y', 'br_x', 'br_y', 'fr_x','fr_y']].to_numpy()
-        pos_samples = torch.as_tensor(corners).view(-1, 8).float()
+        pos_samples = torch.as_tensor(corners).view(-1, 4, 2).float()
+        pos_mean = pos_samples.mean(axis = 1, keepdim = True)
+        diff = torch.as_tensor([-4.5/2, -1, 4.5/2, -1, -4.5/2, 1, 4.5/2, 1]).view(-1, 8)
+        pos_means = pos_mean.repeat(1, 4, 1).view(-1, 8)
+        pos_samples = pos_means + diff 
 
         neg_num= 400 - pos_samples.shape[0]
         neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num, label))
