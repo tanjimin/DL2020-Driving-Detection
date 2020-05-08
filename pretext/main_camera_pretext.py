@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+import numpy as np
 import torchvision
 import torchvision.transforms as transforms
 from trainpretext import epoch_loop 
-from datapretext import UnlabeledCameraPretextDataset
+from datapretext import UnlabeledJigsawDataset
 from modelpretext import Network
 from utilspretext import NoiseContrastiveEstimator
 
@@ -35,7 +35,7 @@ def init_data(param):
 
     unlabeled_scene_index = np.arange(106)
 
-    trainset = UnlabeledCameraPretextDataset("/beegfs/cy1355/data/image_tensor", unlabeled_scene_index)
+    trainset = UnlabeledJigsawDataset("/beegfs/cy1355/data", unlabeled_scene_index)
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size = batch_size_n, 
                                               shuffle=True, 
@@ -46,8 +46,8 @@ def init_data(param):
 
 def init_model(param):
     model = Network().to(param['device'])
-    model = torch.load('./pretrained_rotation_7')
-    print('*** Model loads successfully ***')
+    #model = torch.load('./pretrained_rotation_7')
+    print('*** Train from Scratch ***')
     
     param['model'] = model
 

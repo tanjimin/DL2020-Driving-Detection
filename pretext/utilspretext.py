@@ -8,7 +8,7 @@ import os
 import shutil
 from PIL import Image
 import datetime
-
+from tqdm import tqdm
 
 
 class AverageMeter(object):
@@ -205,24 +205,26 @@ class Progbar(object):
 
 class Memory(object):
     def __init__(self, device, size = 2000, weight = 0.5):
-        self.memory = np.zeros((size, 128))
-        self.weighted_sum = np.zeros((size, 128))
+        self.memory = np.zeros((size, 64))
+        self.weighted_sum = np.zeros((size, 64))
         self.weighted_count = 0
         self.weight = weight
         self.device = device
+        #print(self.memory.shape)
         
     def initialize(self, net, train_loader):
         self.update_weighted_count()
         print('Saving representations to memory')
-        bar = Progbar(len(train_loader), stateful_metrics=[])
-        for step, batch in enumerate(train_loader):
+        #bar = Progbar(len(train_loader.dataset), stateful_metrics=[])
+        for step, batch in enumerate(tqdm(train_loader)):
             with torch.no_grad():                
                 images = batch['original'].to(self.device)
                 index = batch['index']
-                output = net(images = images, mode = 0)                
+                output = net(images = images, mode = 0)   
+                #print(output.shape, images.shape, len(index))             
                 self.weighted_sum[index, :] = output.cpu().numpy()
                 self.memory[index, :] = self.weighted_sum[index, :]
-                bar.update(step, values= [])
+                #bar.update(step, values= [])
                 
     def update(self, index, values):
         self.weighted_sum[index, :] = values + (1 - self.weight) * self.weighted_sum[index, :] 

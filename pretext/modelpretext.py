@@ -15,15 +15,15 @@ class Network(nn.Module):
         super(Network, self).__init__()
         self.network = resnet18()
         self.network = torch.nn.Sequential(*list(self.network.children())[:-1])        
-        self.projection_original_features = nn.Linear(2048, 128)       
-        self.connect_patches_feature = nn.Linear(1152, 128)
+        self.projection_original_features = nn.Linear(512, 64)       
+        self.connect_patches_feature = nn.Linear(576, 64)
         
     def forward_once(self, x):
         return self.network(x)
     
     def return_reduced_image_features(self, original):
         original_features = self.forward_once(original)
-        original_features = original_features.view(-1,2048)
+        original_features = original_features.view(-1,512)
         original_features = self.projection_original_features(original_features)
         return original_features
         
@@ -33,9 +33,11 @@ class Network(nn.Module):
         patches_features = []
         for i, patch in enumerate(patches):
             patch_features = self.return_reduced_image_features(patch)
+            #print(patch_features.shape)
             patches_features.append(patch_features)
         
         patches_features = torch.cat(patches_features, axis = 1)
+        #print(patches_features.shape)
         
         patches_features = self.connect_patches_feature(patches_features)
         return original_features, patches_features
