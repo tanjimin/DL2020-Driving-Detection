@@ -113,12 +113,13 @@ def validation(epoch, batch_i, batch, param):
 def gen_bbox_heatmap(param, ground_truth, camera_feature, epoch, batch):
     camera_feature = camera_feature[:, 0, :]
     batch_size = camera_feature.shape[0]
-    all_bbox = param['validation_loader'].dataset.box_sampler.get_bbox() - 269
+    all_bbox = param['validation_loader'].dataset.box_sampler.get_bbox().copy()
+    all_bbox[:,:,1] = all_bbox[:,:,1] - 269 
     all_bbox_coord = all_bbox.mean(axis = 1)
     all_bbox_size = all_bbox.shape[0]
     bbox_model = param['model'][1].eval()
     classifier = param['model'][2].eval()
-    model_input = torch.LongTensor(all_bbox).view(-1, 8).to(param['device'])
+    model_input = torch.LongTensor(all_bbox).view(-1, 8).to(param['device']) / 10
     bbox_feature = bbox_model(model_input.float())
     for camera_batch in range(camera_feature.shape[0]):
         camera_batches = camera_feature[camera_batch].unsqueeze(0).repeat(all_bbox_size, 1)
@@ -131,6 +132,6 @@ def gen_bbox_heatmap(param, ground_truth, camera_feature, epoch, batch):
         if not os.path.exists(img_dir): os.mkdir(img_dir)
         plt.savefig('{}/test_img_{}_{}_max{}_min{}.png'.format(img_dir, epoch, batch, max_value, min_value))
         plt.close()
-        cv2.imwrite('{}/test_img_{}_{}_label.png'.format(img_dir, epoch, batch), np.rot90(ground_truth[camera_batch].numpy() * 255))
+        cv2.imwrite('{}/test_img_{}_{}_label.png'.format(img_dir, epoch, batch), ground_truth[camera_batch].numpy() * 255)
         break
 

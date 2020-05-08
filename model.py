@@ -154,27 +154,22 @@ class FrontDynamicModel(nn.Module):
     def __init__(self):
         super(FrontDynamicModel, self).__init__()
 
-        self.deconv1 = nn.Sequential(
-                        nn.ConvTranspose2d(256, 64, 5, 2, 0),
-                        nn.BatchNorm2d(64),
+        self.conv1 = nn.Sequential(
+                        nn.Conv2d(256, 512, 5, 2, (2, 0)),
+                        nn.BatchNorm2d(512),
                         nn.ReLU())
 
-        self.deconv2 = nn.Sequential(
-                        nn.ConvTranspose2d(64, 16, 3, 1, 0),
-                        nn.BatchNorm2d(16),
+        self.conv2 = nn.Sequential(
+                        nn.Conv2d(512, 1024, 3, 2, 0),
+                        nn.BatchNorm2d(1024),
                         nn.ReLU())
 
-        self.deconv3 = nn.Sequential(
-                        nn.ConvTranspose2d(16, 8, 3, 1, 0),
-                        nn.BatchNorm2d(8),
+        self.conv3 = nn.Sequential(
+                        nn.Conv2d(1024, 2048, 3, 1, 0),
+                        nn.BatchNorm2d(2048),
                         nn.ReLU())
         
-        self.deconv4 = nn.Sequential(
-                        nn.ConvTranspose2d(8, 8, 3, 1, 0),
-                        nn.BatchNorm2d(8),
-                        nn.ReLU())
-
-        self.fc = nn.Linear(16072, 1024)
+        self.fc = nn.Linear(2048, 1024)
 
     def forward(self, inputs):
         """
@@ -184,11 +179,10 @@ class FrontDynamicModel(nn.Module):
             out: batch * 1 * 400 * 538
         """
         
-        out = self.deconv1(inputs)
-        out = self.deconv2(out)
-        out = self.deconv3(out)
-        out = self.deconv4(out)
-        out = self.fc(out.view(-1, 16072))
+        out = self.conv1(inputs)
+        out = self.conv2(out)
+        out = self.conv3(out)
+        out = self.fc(out.view(-1, 2048))
         return out
 
     """    
@@ -216,6 +210,12 @@ class BoundingBoxClassifier(nn.Module):
 
         self.encoder = nn.Sequential(
                         nn.Linear(1024 + 32, 64),
+                        nn.BatchNorm1d(64),
+                        nn.ReLU(),
+                        nn.Linear(64, 128),
+                        nn.BatchNorm1d(128),
+                        nn.ReLU(),
+                        nn.Linear(128, 64),
                         nn.BatchNorm1d(64),
                         nn.ReLU(),
                         nn.Linear(64, 1),
