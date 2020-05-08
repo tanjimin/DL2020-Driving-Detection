@@ -18,7 +18,7 @@ class BboxGenerate():
                 left_bottom = [i, j + self.car_height]
                 right_top = [i + self.car_width, j]
                 right_bottom = [i + self.car_width, j + self.car_height]
-                if j + self.car_height >= 800 or i + self.car_width >= 800:
+                if j + self.car_height >= self.roadmap_height or i + self.car_width >= self.roadmap_width:
                     break
                 else:
                     box = np.array([left_top, right_top, left_bottom, right_bottom])
@@ -69,13 +69,13 @@ def concat_cameras(outputs):
 
     rot_axes = (2,1)
 
-    init_out = np.zeros(batch_n, 800,800)
+    init_out = np.zeros((batch_n, 800,800))
     # rotate counter-clockwise
     # assign front left and back right cameras
     # then rotate clockwise back and crop out 800*800
     init_out = ndimage.rotate(init_out, 30, axes = rot_axes)
-    init_out[:, 547 - 400:547, 278: 278 + 538] = front_left.copy()
-    init_out[:, 547:547+400, 278: 278 + 538][::-1,::-1] = back_right.copy()
+    init_out[:, 547 - 400:547, 278: 278 + 538] += front_left.copy()
+    init_out[:, 547:547+400, 278: 278 + 538] += back_right[:, ::-1,::-1].copy()
     init_out = ndimage.rotate(init_out, -30, axes = rot_axes)
     init_out = init_out[:, 347:347+800, 347:347+800]
 
@@ -83,19 +83,53 @@ def concat_cameras(outputs):
     # assign front right and back right cameras
     # then rotate counter-clockwise back and crop out 800*800
     init_out = ndimage.rotate(init_out, -30, axes = rot_axes)
-    init_out[:, 547-400:547, 278: 278 + 538 ] = back_left.copy()
-    init_out[:, 547:547+400, 278: 278 + 538 ][::-1,::-1] = front_right.copy()
+    init_out[:, 547-400:547, 278: 278 + 538 ] += back_left.copy()
+    init_out[:, 547:547+400, 278: 278 + 538 ] += front_right[:, ::-1,::-1].copy()
     init_out = ndimage.rotate(init_out, 30, axes = rot_axes)
     init_out = init_out[:, 347:347+800, 347:347+800]
 
     # inverse the process for front/back as well
-    init_out[:, 131:131+538, 400:] = ndimage.rotate(front, -90, axes = rot_axes)
-    init_out[:, 131:131+538, :400][::-1,::-1] = ndimage.rotate(back, -90, axes = rot_axes)
+    init_out[:, 131:131+538, 400:] += ndimage.rotate(front, -90, axes = rot_axes)
+    init_out[:, 131:131+538, :400] += ndimage.rotate(back[:, ::-1,::-1], -90, axes = rot_axes)
 
-    init_out = torch.tensor(init_out)
+    init_out = torch.FloatTensor(init_out)
 
     return init_out
 
+def reorder_tensor(tensor, device):
+    '''
+    Input/Output tensor shape: [batch_size, 6(images per sample), 3, H, W]
+    
+    Original
+    image_names = [
+    'CAM_FRONT_LEFT.jpeg',
+    'CAM_FRONT.jpeg',
+    'CAM_FRONT_RIGHT.jpeg',
+    'CAM_BACK_LEFT.jpeg',
+    'CAM_BACK.jpeg',
+    'CAM_BACK_RIGHT.jpeg',
+    ]
+    
+    Output
+    image_names = [
+    'CAM_FRONT_LEFT.jpeg',
+    'CAM_FRONT.jpeg',
+    'CAM_FRONT_RIGHT.jpeg',
+    'CAM_BACK_RIGHT.jpeg',
+    'CAM_BACK.jpeg',
+    'CAM_BACK_LEFT.jpeg'
+    ]
+    '''
+    out_tensor = torch.zeros(tensor.shape).to(device)
+    
+    out_tensor[:,0,:] = tensor[:,0,:]
+    out_tensor[:,1,:] = tensor[:,1,:]
+    out_tensor[:,2,:] = tensor[:,2,:]
+    out_tensor[:,3,:] = tensor[:,5,:]
+    out_tensor[:,4,:] = tensor[:,4,:]
+    out_tensor[:,5,:] = tensor[:,3,:]
+    
+    return out_tensor
 
 def xywh2xyxy(x):
     y = x.new(x.shape)

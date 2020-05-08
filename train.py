@@ -107,7 +107,6 @@ def train(epoch, batch_i, batch, param):
 
         static_camerabased = param['model'][0]
         unet_cameras = param['model'][1].train()
-        
 
         # [batch*6, 400, 538]
         outputs_cameras = static_camerabased(inputs).squeeze(1)
