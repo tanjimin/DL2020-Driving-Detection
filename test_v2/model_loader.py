@@ -92,41 +92,50 @@ class ModelLoader():
         # Front Dynamic
         # camera_feature: torch.Size([6, 1, 1024])
         camera_feature = self.dynamic(resnet_output).unsqueeze(1)
-        import pdb;pdb.set_trace()
+        
 
-        all_bbox = param['validation_loader'].dataset.box_sampler.get_bbox().copy()
+        ### all_bbox = param['validation_loader'].dataset.box_sampler.get_bbox().copy()
+        all_bbox = BboxGenerate(538, 400, 20, 45).get_bbox().copy()
+        
         all_bbox[:,:,1] = all_bbox[:,:,1] - 269 
-        all_bbox_coord = all_bbox.mean(axis = 1)
+        all_bbox_coord = all_bbox.mean(axis = 1).astype(int)
         all_bbox_size = all_bbox.shape[0]
 
         model_input = torch.LongTensor(all_bbox).view(-1, 8).cuda() / 10
+        # bbox_feature: [183890, 32]
         bbox_feature = self.bbox_encoder(model_input.float())
 
         canvases = []
         for camera_idx in range(camera_feature.shape[0]):
-            camera_batches = camera_feature[camera_idx].unsqueeze(0).repeat(all_bbox_size, 1)
+            camera_batches = camera_feature[camera_idx].repeat(all_bbox_size, 1)
             pred = self.bbox_classifier(camera_batches, bbox_feature).squeeze(1)
             max_value = pred.max().item()
             min_value = pred.min().item()
-            pred = pred > threshould
-            canvas = np.zeros(538, 400)
+            canvas = np.zeros((538, 400))
             for coord_idx, coord in enumerate(all_bbox_coord):
                 canvas[coord[0], coord[1]] = pred[coord_idx]
             canvases.append(canvas)
 
-        road_map = concat_cameras(canvases)
-
+        # fusing function to generate 800 * 800
+        canvases = np.asarray(canvases)
+        canvases = np.rot90(canvases, axes = (1, 2)).reshape((1, 6, 400, 538))
+        road_map = concat_cameras(canvases).reshape(800, 800)
+        
         bbox_list = []
         for x_coord in range(800):
             for y_coord in range(800):
-                if road_map[x_coord, y_coord] == 1:
+                if road_map[x_coord, y_coord] > 0.2:
                     proc_x = (x_coord - 400) / 10
                     proc_y = (y_coord - 400) / 10
                     bbox = [proc_x - 4.5/2, proc_y - 1, proc_x + 4.5/2, proc_y - 1, proc_x - 4.5/2, proc_y + 1, proc_x + 4.5/2, proc_y + 1]
                     bbox_list.append(bbox)
-        bbox_list = bbox_list.reshape(1, -1, 4, 2) 
+        bbox_list = np.asarray(bbox_list) * 10
+        bbox_list = bbox_list.reshape(1, -1, 2, 4) 
+        import pdb;pdb.set_trace()
+        bbox_list = torch.clamp(torch.tensor(bbox_list).squeeze(0), min = -400, max = 400)
+        output = non_max_suppression(bbox_list, road_map, conf_thres=0.15, nms_thres=0.4)
 
-        return torch.rand(1, 15, 2, 4) * 10
+        return output
 
     def get_binary_road_map(self, samples):
         # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
