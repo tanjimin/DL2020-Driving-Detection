@@ -37,7 +37,7 @@ def init_data(param):
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=4, 
                                               shuffle=True, 
-                                              num_workers=4,
+                                              num_workers=10,
                                               pin_memory=True)
 
     param['train_loader'] = trainloader
