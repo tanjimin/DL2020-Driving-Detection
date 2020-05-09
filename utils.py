@@ -210,7 +210,14 @@ def non_max_suppression(prediction, conf_map, conf_thres=0.5, nms_thres=0.4):
         large_overlap = bbox_iou(detections[0, :4].unsqueeze(0), detections[:, :4]) > nms_thres
         # Indices of boxes with lower confidence scores, large IOUs and matching labels
         invalid = large_overlap 
-        keep_boxes += [detections[0]]
+        detection_fullbbox = torch.zeros((2, 4))
+        detection_fullbbox[:,0] = detections[0,:2]
+        detection_fullbbox[0,1] = detections[0,0]
+        detection_fullbbox[1,1] = detections[0,1] + 45
+        detection_fullbbox[0,2] = detections[0,0] + 20
+        detection_fullbbox[1,2] = detections[0,1]
+        detection_fullbbox[:,3] = detections[0,2:]
+        keep_boxes += [detection_fullbbox ]
         detections = detections[~invalid]
     if keep_boxes:
         output = torch.stack(keep_boxes)
@@ -236,4 +243,4 @@ if __name__ == "__main__":
     # print(len(bbox_gen.sample(100, input_box)))
     inputs = torch.rand((100,2, 4))
     conf_map = torch.rand((800,800))
-    print(non_max_suppression(inputs, conf_map))
+    print(non_max_suppression(inputs, conf_map).shape)
