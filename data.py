@@ -1,5 +1,5 @@
 import os
-
+from math import sqrt
 import numpy as np
 import pandas as pd
 import torch
@@ -122,11 +122,15 @@ class ObjectRegressionDataset(Dataset):
         else:
             self.box_sampler = BboxGenerate(800, 800, 20, 45)
 
-    def _filter_nonfront(self):
+    def _filter_nonfront(self, camera_idx = None):
+        """
+        camera_idx: 0-fl 1-f 2-fr 3-br 4-b 5-bl
+        """
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_x'] >= 0) | (self.annotation_dataframe['fr_x'] >= 0)]
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_x'] >= 0) | (self.annotation_dataframe['br_x'] >= 0)]
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['fl_y'].abs() <= 26.9) | (self.annotation_dataframe['fr_y'].abs() <= 26.9)]
         self.annotation_dataframe = self.annotation_dataframe[(self.annotation_dataframe['bl_y'].abs() <= 26.9) | (self.annotation_dataframe['br_y'].abs() <= 26.9)]
+
 
     def __len__(self):
         return len(self.data_names)
@@ -170,6 +174,180 @@ class ObjectRegressionDataset(Dataset):
             return data[1,:], samples, target, label
         else:
             return data, samples, target, label
+
+
+class CameraBasedObjectRegressionDataset(Dataset):
+    
+    def __init__(self, data_dir, label_dir, annotation_file):
+        self.data_dir = data_dir
+        self.label_dir = label_dir
+        self.data_names = sorted(os.listdir(data_dir))
+        self.annotation_dataframe = pd.read_csv(annotation_file)
+        self.camera_dataframes = [self._filter_nonfront(self.annotation_dataframe, i) for i in range(5)]
+        self.box_sampler= BboxGenerate(538, 400, 20, 45) ## to be confirmed
+        self.rotate_degrees = [-np.pi/3., 0, np.pi/3., (2*np.pi)/3., np.pi, -(2*np.pi)/3.]
+        self.rotate_matrix = [self._generate_rotate_matrix(degree) for degree in self.rotate_degrees]
+
+    def _generate_rotate_matrix(self, degree):
+        return np.array([[np.cos(degree), -np.sin(degree)],[np.sin(degree), np.cos(degree)]])
+
+    def _filter_nonfront(self, camera_idx):
+        """
+        camera_idx: 0-fl 1-f 2-fr 3-br 4-b 5-bl
+        """
+        # to be confirmed: no need for rotation?
+        camera_dataframe = self.annotation_dataframe.copy()
+        positions = ['fl_', 'fr_','br_','bl_']
+        if camera_idx == 0:
+            k = sqrt(3)
+            # y - sqrt(3)*x + 53.8 > 0
+            idxsets = [((camera_dataframe[pos+'y'] - k * camera_dataframe[pos + 'x'] + 53.8) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # y - sqrt(3)*x - 53.8 < 0
+            idxsets = [((camera_dataframe[pos+'y'] - k * camera_dataframe[pos+'x'] - 53.8) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # sqrt(3) * y +  x > 0
+            idxsets = [((k * camera_dataframe[pos+'y'] + camera_dataframe[pos+'x'] ) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # sqrt(3) * y +  x - 80 < 0
+            idxsets = [((k * camera_dataframe[pos+'y']] + camera_dataframe[pos+'x']] -80 ) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+        elif camera_idx == 1:
+            # x > 0
+            idxsets = [(camera_dataframe[pos + 'x'] > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # abs(y) < 26.9
+            idxsets = [(camera_dataframe[pos + 'y'].abs < 26.9) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+        elif camera_idx == 2:
+            k = sqrt(3)
+            # sqrt(3) * y -  x < 0
+            idxsets = [((k * camera_dataframe[pos+'y'] - camera_dataframe[pos+'x'] ) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # sqrt(3) * y - x + 80 > 0
+            idxsets = [((k * camera_dataframe[pos+'y']] - camera_dataframe[pos+'x']] + 80 ) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # y + sqrt(3)*x - 53.8 < 0
+            idxsets = [((camera_dataframe[pos+'y'] + k * camera_dataframe[pos + 'x'] - 53.8) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # y + sqrt(3)*x + 53.8 > 0
+            idxsets = [((camera_dataframe[pos+'y'] + k * camera_dataframe[pos + 'x'] + 53.8) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+        elif camera_idx == 3:
+            k = sqrt(3)
+            # y - sqrt(3)*x + 53.8 > 0
+            idxsets = [((camera_dataframe[pos+'y'] - k * camera_dataframe[pos + 'x'] + 53.8) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # y - sqrt(3)*x - 53.8 < 0
+            idxsets = [((camera_dataframe[pos+'y'] - k * camera_dataframe[pos+'x'] - 53.8) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # sqrt(3) * y +  x < 0
+            idxsets = [((k * camera_dataframe[pos+'y'] + camera_dataframe[pos+'x'] ) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # sqrt(3) * y +  x + 80 > 0
+            idxsets = [((k * camera_dataframe[pos+'y']] + camera_dataframe[pos+'x']] + 80 ) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+        elif camera_idx == 4:
+            # x < 0
+            idxsets = [(camera_dataframe[pos + 'x'] < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # abs(y) < 26.9
+            idxsets = [(camera_dataframe[pos + 'y'].abs < 26.9) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+        elif camera_idx == 5:
+            k = sqrt(3)
+            # sqrt(3) * y -  x > 0
+            idxsets = [((k * camera_dataframe[pos+'y'] - camera_dataframe[pos+'x'] ) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # sqrt(3) * y - x - 80 < 0
+            idxsets = [((k * camera_dataframe[pos+'y']] - camera_dataframe[pos+'x']] - 80 ) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # y + sqrt(3)*x - 53.8 < 0
+            idxsets = [((camera_dataframe[pos+'y'] + k * camera_dataframe[pos + 'x'] - 53.8) < 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+            # y + sqrt(3)*x + 53.8 > 0
+            idxsets = [((camera_dataframe[pos+'y'] + k * camera_dataframe[pos + 'x'] + 53.8) > 0) for pos in positions]
+            idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
+            camera_dataframe = camera_dataframe[idxset]
+
+    def __len__(self):
+        return len(self.data_names)
+
+    def __getitem__(self, idx):
+        data_path = os.path.join(self.data_dir, self.data_names[idx])
+        data = np.load(data_path)
+        label_path = os.path.join(self.label_dir, self.data_names[idx])
+        label = (np.load(label_path) * 1).astype(np.single)
+        id_list = self.data_names[idx].split('_')
+        scene_id, sample_id = int(id_list[1]), int(id_list[-1].split('.')[0])
+    
+
+        # label_processed: 6 * 400 * 538
+        label_rot1 = ndimage.rotate(label, 30)
+        label1 = label_rot1[547 - 400:547, 278: 278 + 538].copy()
+        label4 = label_rot1[547:547+400, 278: 278 + 538][::-1,::-1].copy()
+
+        label_rot2 = ndimage.rotate(label, -30)
+        label6 = label_rot2[547-400:547, 278: 278 + 538 ].copy()
+        label3 = label_rot2[547:547+400, 278: 278 + 538 ][::-1,::-1].copy()
+
+        label2 = np.rot90(label[131:669,400:]).copy()
+        label5 = np.rot90(label[131:669, :400][::-1,::-1]).copy()
+
+        label_processed = torch.from_numpy(np.stack([label1, label2, label3, label4, label5, label6], axis = 0))
+        
+        # corners
+        samples_cameras = []
+        targets_cameras = []
+        for camera_idx in range(5):
+            data_entries = self.camera_dataframes[camera_idx][(self.camera_dataframes[camera_idx]['scene'] == scene_id) & (self.camera_dataframes[camera_idx]['sample'] == sample_id)]
+            corners = data_entries[['bl_x', 'bl_y', 'fl_x', 'fl_y', 'br_x', 'br_y', 'fr_x','fr_y']].to_numpy()
+            pos_samples = torch.as_tensor(corners).view(-1, 4, 2).float()
+            pos_mean = pos_samples.mean(axis = 1, keepdim = True)
+            diff = torch.as_tensor([-4.5/2, -1, 4.5/2, -1, -4.5/2, 1, 4.5/2, 1]).view(-1, 8)
+            pos_means = pos_mean.repeat(1, 4, 1).view(-1, 4, 2).unsqueeze(2)
+            pos_means_processed = torch.matmul(pos_means, self.rotate_matrix[camera_idx].T) # n*4*1*2
+            pos_samples_processed = pos_means_processed.squeeze().view(-1,8) + diff 
+
+            neg_num= 400 - pos_samples.shape[0]
+            neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num))
+            neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
+            neg_samples = neg_samples.view(-1,8) / 10
+            samples = torch.cat([pos_samples_processed, neg_samples], 0)
+            target = torch.cat([torch.ones(pos_samples_processed.shape[0]), torch.zeros(neg_num)]).float()
+            samples_cameras.append(samples)
+            targets_cameras.append(target)
+
+        # data: (256, 16, 20)
+        # samples: (n = 100, 8)
+        # target: 1000
+        # data: CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT, CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT
+
+        # output label: [height = 538, width = 400] ---> rotate counterclockwise [h = 400, width = 538]
+        #print(data.shape, samples.shape, target.shape)
+        targets_cameras = torch.from_numpy(np.stack(targets_cameras, axis = 0))
+        samples_cameras = torch.from_numpy(np.stack(samples_cameras, axis = 0))
+
+        return data, samples_cameras, targets_cameras, label_processed            
 
 class ObjectDetectionDataset(Dataset):
     

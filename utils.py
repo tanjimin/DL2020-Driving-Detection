@@ -41,11 +41,13 @@ class BboxGenerate():
 
         # create mask for picked
         # mask: (2*k,)
-        mask = np.sum(input_bbox_array[y_, x_], axis = 1) == 0
-        picked_masked = picked[mask]
-
-        # (k, 4, 2)
-        return picked_masked[:k,]
+        if input_bbox_array:
+            mask = np.sum(input_bbox_array[y_, x_], axis = 1) == 0
+            picked_masked = picked[mask]
+            # (k, 4, 2)
+            return picked_masked[:k,]
+        else:
+            return picked[:k,]
     
     def get_bbox(self):
         return self.bbox_gen
