@@ -175,58 +175,65 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
 
 
 
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
+def non_max_suppression(prediction, conf_map, conf_thres=0.5, nms_thres=0.4):
     """
     Inputs: 
-        prediction: n tuples of (center x, center y, width, height)
+        prediction: n * 2 * 4
     Outputs:
         n' tuples of (x1, y1, x2, y2, object_conf, class_score, class_pred)
+        n * 2 * 4
     """
 
     # From (center x, center y, width, height) to (x1, y1, x2, y2)
-    prediction[..., :4] = xywh2xyxy(prediction[..., :4])
-    output = [None for _ in range(len(prediction))]
-    for image_i, image_pred in enumerate(prediction):
-        # Filter out confidence scores below threshold
-        image_pred = image_pred[image_pred[:, 4] >= conf_thres]
-        if not image_pred.size(0):
-            continue
-        # Object confidence times class confidence  !!!只有obj conf
-        score = image_pred[:, 4] * image_pred[:, 5:].max(1)[0]
-        # Sort by it
-        image_pred = image_pred[(-score).argsort()]
-        class_confs, class_preds = image_pred[:, 5:].max(1, keepdim=True)
-        detections = torch.cat((image_pred[:, :5], class_confs.float(), class_preds.float()), 1)
-        # Perform non-maximum suppression
-        keep_boxes = []
-        while detections.size(0):
-            large_overlap = bbox_iou(detections[0, :4].unsqueeze(0), detections[:, :4]) > nms_thres
-            label_match = detections[0, -1] == detections[:, -1]
-            # Indices of boxes with lower confidence scores, large IOUs and matching labels
-            invalid = large_overlap & label_match
-            weights = detections[invalid, 4:5]
-            # Merge overlapping bboxes by order of confidence
-            detections[0, :4] = (weights * detections[invalid, :4]).sum(0) / weights.sum()
-            keep_boxes += [detections[0]]
-            detections = detections[~invalid]
-        if keep_boxes:
-            output[image_i] = torch.stack(keep_boxes)
+    prediction_reshape = torch.cat([prediction[:,:,0], prediction[:,:,3]], dim = 1) #n * 4 
 
-    return output
+    scores = []
+    detections = []
+    for i,image_pred in enumerate(prediction_reshape):
+        # Filter out confidence scores below threshold
+        if conf_map[int((image_pred[0] + image_pred[2])/2.)][int((image_pred[1] + image_pred[3])/2.)] < conf_thres:
+            continue
+        else:
+            detections.append(image_pred)
+            scores.append( conf_map[int((image_pred[0] + image_pred[2])/2.)][int((image_pred[1] + image_pred[3])/2.)] )
+
+    # Sort by it
+    scores = torch.FloatTensor(scores)
+    if not detections:
+        return 0.
+    detections = torch.stack(detections)
+    detections = detections[(-scores).argsort()]
+
+    # Perform non-maximum suppression
+    keep_boxes = []
+    while detections.size(0):
+        large_overlap = bbox_iou(detections[0, :4].unsqueeze(0), detections[:, :4]) > nms_thres
+        # Indices of boxes with lower confidence scores, large IOUs and matching labels
+        invalid = large_overlap 
+        keep_boxes += [detections[0]]
+        detections = detections[~invalid]
+    if keep_boxes:
+        output = torch.stack(keep_boxes)
+        return output/10.
+    else:
+        return 0.
 
 if __name__ == "__main__":
     # 800 * 800
-    input_box = np.load('/Users/leo/Downloads/DL_data/obj_binary_roadmap/road_map/scene_106_sample_0.npy')
+    # input_box = np.load('/Users/leo/Downloads/DL_data/obj_binary_roadmap/road_map/scene_106_sample_0.npy')
     
-    roadmap_dim = (800,800)
-    car_height = 20
-    car_width = 45
+    # roadmap_dim = (800,800)
+    # car_height = 20
+    # car_width = 45
 
-    bbox_gen = BboxGenerate(roadmap_dim[0], roadmap_dim[1], car_height, car_width)
-    bbox_all = bbox_gen.get_bbox()
+    # bbox_gen = BboxGenerate(roadmap_dim[0], roadmap_dim[1], car_height, car_width)
+    # bbox_all = bbox_gen.get_bbox()
 
-    # (590436, 4, 2)
-    print(bbox_all.shape)
+    # # (590436, 4, 2)
+    # print(bbox_all.shape)
 
-    # len = 100
-    print(len(bbox_gen.sample(100, input_box)))
+    # # len = 100
+    # print(len(bbox_gen.sample(100, input_box)))
+    inputs = torch.rand((100,2, 4))
+    conf_map = torch.rand((800,800))
+    print(non_max_suppression(inputs, conf_map))
