@@ -16,7 +16,7 @@ def epoch_loop(param):
         train_loop(epoch, param) 
         print("Epoch {}, Train Loss: {}".format(epoch, param['running_loss'] / len(param['train_loader'])))
         if epoch % 10 == 0:
-            validation_loop(epoch, param)
+            #validation_loop(epoch, param)
             save_path = 'saves_{}'.format(param['run_name'])
             if not os.path.exists(save_path):
                 os.mkdir(save_path)
@@ -27,7 +27,7 @@ def epoch_loop(param):
                             '{}/fusion_{}'.format(save_path, epoch))
                     torch.save(param['model'][1], 
                             '{}/static_{}'.format(save_path, epoch))
-                elif param['run_name'] in ['polar', 'front', 'camerabased', 'bbox','bbox_reg']:
+                elif param['run_name'] in ['polar', 'front', 'camerabased', 'bbox','bbox_reg', 'bbox_reg_full']:
                     torch.save(param['model'], 
                             '{}/static_{}_{}'.format(save_path, param['run_name'], epoch))
                 elif param['run_name'] in ['camerabased_full']:
@@ -53,7 +53,7 @@ def train(epoch, batch_i, batch, param):
     param['optimizer'].zero_grad()
     outputs = None
     
-    if param['run_name'] != 'bbox_reg':
+    if not param['run_name'] in ['bbox_reg', 'bbox_reg_full']:
         inputs, labels = batch 
         inputs = inputs.to(param['device'])
         labels = labels.to(param['device'])
@@ -97,8 +97,8 @@ def train(epoch, batch_i, batch, param):
         camera_inputs = inputs.view(-1, 256, 16, 20)
         camera_feature = camera_model(camera_inputs).unsqueeze(1)
         bbox_feature = bbox_model(samples.view(-1, 8))
-        camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1)
-        outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1])
+        camera_feature_batch = camera_feature.repeat(1, samples.shape[2], 1)
+        outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1]).view(4, 6, 400)
 
     elif param['run_name'] == 'camerabased_full':
         inputs = inputs.view(-1, 256, 16, 20)
