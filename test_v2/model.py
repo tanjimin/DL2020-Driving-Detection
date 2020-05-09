@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.functional as F
 
+####################################################################
+# Static Model
+####################################################################
 class FrontStaticModel(nn.Module):
     def __init__(self):
         super(FrontStaticModel, self).__init__()
@@ -42,6 +45,111 @@ class FrontStaticModel(nn.Module):
         return out
 
 
+####################################################################
+# Dynamic Model
+####################################################################
+
+class FrontDynamicModel(nn.Module):
+    """
+    Inputs:
+        inputs: Image representations   batch * C * H * W. currently 6 * 256 * 16 * 20 
+    Ouputs:
+        out: Flattened representations   batch * (H*W) * C'
+    """
+    def __init__(self):
+        super(FrontDynamicModel, self).__init__()
+
+        self.conv1 = nn.Sequential(
+                        nn.Conv2d(256, 512, 5, 2, (2, 0)),
+                        nn.BatchNorm2d(512),
+                        nn.ReLU())
+
+        self.conv2 = nn.Sequential(
+                        nn.Conv2d(512, 1024, 3, 2, 0),
+                        nn.BatchNorm2d(1024),
+                        nn.ReLU())
+
+        self.conv3 = nn.Sequential(
+                        nn.Conv2d(1024, 2048, 3, 1, 0),
+                        nn.BatchNorm2d(2048),
+                        nn.ReLU())
+        
+        self.fc = nn.Linear(2048, 1024)
+
+    def forward(self, inputs):
+        """
+        Inputs:
+            inputs: batch * C * H * W. currently 6 * 256 * 16 * 20
+        Outputs:
+            out: batch * 1 * 400 * 538
+        """
+        
+        out = self.conv1(inputs)
+        out = self.conv2(out)
+        out = self.conv3(out)
+        out = self.fc(out.view(-1, 2048))
+        return out
+
+####################################################################
+# BBox Encoder
+####################################################################
+
+class BoundingBoxEncoder(nn.Module):
+    """
+    Inputs:
+        samples: Bounding box coordinates   (batch * samples) * 8  
+    Ouputs:
+        out: Bounding box representations   (batch * samples) * 8 * C'
+    """
+    def __init__(self):
+        super(BoundingBoxEncoder, self).__init__() 
+        self.fc1 = nn.Sequential(nn.Linear(8, 16), nn.ReLU())
+        self.fc2 = nn.Linear(16, 32)
+
+    def forward(self, samples):
+        out = self.fc1(samples.unsqueeze(1))
+        out = self.fc2(out)
+        return out.squeeze()
+
+
+####################################################################
+# BBox Classifier
+####################################################################
+class BoundingBoxClassifier(nn.Module):
+    """
+    Inputs:
+        inputs: Image representations   batch * C * H * W. currently 6 * 256 * 16 * 20 
+    Ouputs:
+        out: Flattened representations   batch * (H*W) * C'
+    """
+    def __init__(self):
+        super(BoundingBoxClassifier, self).__init__()
+
+        self.encoder = nn.Sequential(
+                        nn.Linear(1024 + 32, 64),
+                        nn.BatchNorm1d(64),
+                        nn.ReLU(),
+                        nn.Linear(64, 128),
+                        nn.BatchNorm1d(128),
+                        nn.ReLU(),
+                        nn.Linear(128, 64),
+                        nn.BatchNorm1d(64),
+                        nn.ReLU(),
+                        nn.Linear(64, 1),
+                        nn.Sigmoid())
+                       
+
+    def forward(self, camera, bbox):
+        """
+        Inputs:
+            camera: batch * H (currently n * 1024) 
+            bbox: batch * H (currently n * 32)
+        Outputs:
+            out: batch * 1 * 400 * 538
+        """
+        inputs = torch.cat((camera, bbox), dim = 1)
+        out = self.encoder(inputs)
+        return out
 
 ####################################################################
 # Unet Block
@@ -149,11 +257,20 @@ class UNet(nn.Module):
         logits = self.outc(x)
         out = self.sig(logits)
         return out
-####################################################################
 
 ######################################################################
 # ResNet 18
 ######################################################################
+
+class Network(nn.Module):
+    def __init__(self):
+        super(Network, self).__init__()
+        self.network = resnet18()
+        self.network = torch.nn.Sequential(*list(self.network.children())[:-1])        
+        self.projection_original_features = nn.Linear(512, 64)       
+        self.connect_patches_feature = nn.Linear(576, 64)
+
+
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
