@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-
+from torchvision import transforms
 # import your model class
 # import ...
 from model import *
@@ -56,13 +56,13 @@ class ModelLoader():
         ########################
         # Dynamic 
         ########################
-        dynamic = FrontDynamicModel()
-        bbox_encoder = BoundingBoxEncoder()
-        bbox_classifier = BoundingBoxClassifier()
+        dynamic = FrontDynamicModel().cuda()
+        bbox_encoder = BoundingBoxEncoder().cuda()
+        bbox_classifier = BoundingBoxClassifier().cuda()
 
-        # dynamic.load_state_dict(model_all_state_dict['?'])
-        # bbox_encoder.load_state_dict(model_all_state_dict['?'])
-        # bbox_classifier.load_state_dict(model_all_state_dict['?'])
+        dynamic.load_state_dict(model_all_state_dict['dynamic'])
+        bbox_encoder.load_state_dict(model_all_state_dict['bbox_encoder'])
+        bbox_classifier.load_state_dict(model_all_state_dict['bbox_classifier'])
 
         resnet = resnet.eval()
         static = static.eval()
@@ -90,7 +90,9 @@ class ModelLoader():
         resnet_output = self.resnet(samples_input)
 
         # Front Dynamic
+        # camera_feature: torch.Size([6, 1, 1024])
         camera_feature = self.dynamic(resnet_output).unsqueeze(1)
+        import pdb;pdb.set_trace()
 
         all_bbox = param['validation_loader'].dataset.box_sampler.get_bbox().copy()
         all_bbox[:,:,1] = all_bbox[:,:,1] - 269 
