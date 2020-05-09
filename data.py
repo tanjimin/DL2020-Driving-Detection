@@ -183,13 +183,13 @@ class CameraBasedObjectRegressionDataset(Dataset):
         self.label_dir = label_dir
         self.data_names = sorted(os.listdir(data_dir))
         self.annotation_dataframe = pd.read_csv(annotation_file)
-        self.camera_dataframes = [self._filter_nonfront(self.annotation_dataframe, i) for i in range(5)]
+        self.camera_dataframes = [self._filter_nonfront(i) for i in range(6)]
         self.box_sampler= BboxGenerate(538, 400, 20, 45) ## to be confirmed
         self.rotate_degrees = [-np.pi/3., 0, np.pi/3., (2*np.pi)/3., np.pi, -(2*np.pi)/3.]
         self.rotate_matrix = [self._generate_rotate_matrix(degree) for degree in self.rotate_degrees]
 
     def _generate_rotate_matrix(self, degree):
-        return np.array([[np.cos(degree), -np.sin(degree)],[np.sin(degree), np.cos(degree)]])
+        return torch.FloatTensor([[np.cos(degree), -np.sin(degree)],[np.sin(degree), np.cos(degree)]])
 
     def _filter_nonfront(self, camera_idx):
         """
@@ -213,7 +213,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # sqrt(3) * y +  x - 80 < 0
-            idxsets = [((k * camera_dataframe[pos+'y']] + camera_dataframe[pos+'x']] -80 ) < 0) for pos in positions]
+            idxsets = [((k * camera_dataframe[pos+'y'] + camera_dataframe[pos+'x'] -80 ) < 0) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
         elif camera_idx == 1:
@@ -222,7 +222,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # abs(y) < 26.9
-            idxsets = [(camera_dataframe[pos + 'y'].abs < 26.9) for pos in positions]
+            idxsets = [(camera_dataframe[pos + 'y'].abs() < 26.9) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
         elif camera_idx == 2:
@@ -232,7 +232,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # sqrt(3) * y - x + 80 > 0
-            idxsets = [((k * camera_dataframe[pos+'y']] - camera_dataframe[pos+'x']] + 80 ) > 0) for pos in positions]
+            idxsets = [((k * camera_dataframe[pos+'y'] - camera_dataframe[pos+'x'] + 80 ) > 0) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # y + sqrt(3)*x - 53.8 < 0
@@ -258,7 +258,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # sqrt(3) * y +  x + 80 > 0
-            idxsets = [((k * camera_dataframe[pos+'y']] + camera_dataframe[pos+'x']] + 80 ) > 0) for pos in positions]
+            idxsets = [((k * camera_dataframe[pos+'y'] + camera_dataframe[pos+'x'] + 80 ) > 0) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
         elif camera_idx == 4:
@@ -267,7 +267,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # abs(y) < 26.9
-            idxsets = [(camera_dataframe[pos + 'y'].abs < 26.9) for pos in positions]
+            idxsets = [(camera_dataframe[pos + 'y'].abs() < 26.9) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
         elif camera_idx == 5:
@@ -277,7 +277,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # sqrt(3) * y - x - 80 < 0
-            idxsets = [((k * camera_dataframe[pos+'y']] - camera_dataframe[pos+'x']] - 80 ) < 0) for pos in positions]
+            idxsets = [((k * camera_dataframe[pos+'y'] - camera_dataframe[pos+'x'] - 80 ) < 0) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
             # y + sqrt(3)*x - 53.8 < 0
@@ -288,6 +288,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             idxsets = [((camera_dataframe[pos+'y'] + k * camera_dataframe[pos + 'x'] + 53.8) > 0) for pos in positions]
             idxset = idxsets[0] | idxsets[1]| idxsets[2] | idxsets[3]
             camera_dataframe = camera_dataframe[idxset]
+        return camera_dataframe
 
     def __len__(self):
         return len(self.data_names)
@@ -318,7 +319,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
         # corners
         samples_cameras = []
         targets_cameras = []
-        for camera_idx in range(5):
+        for camera_idx in range(6):
             data_entries = self.camera_dataframes[camera_idx][(self.camera_dataframes[camera_idx]['scene'] == scene_id) & (self.camera_dataframes[camera_idx]['sample'] == sample_id)]
             corners = data_entries[['bl_x', 'bl_y', 'fl_x', 'fl_y', 'br_x', 'br_y', 'fr_x','fr_y']].to_numpy()
             pos_samples = torch.as_tensor(corners).view(-1, 4, 2).float()
@@ -329,7 +330,7 @@ class CameraBasedObjectRegressionDataset(Dataset):
             pos_samples_processed = pos_means_processed.squeeze().view(-1,8) + diff 
 
             neg_num= 400 - pos_samples.shape[0]
-            neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num))
+            neg_samples = torch.FloatTensor(self.box_sampler.sample(neg_num, None))
             neg_samples[:,:,1] = neg_samples[:,:,1] - 269 
             neg_samples = neg_samples.view(-1,8) / 10
             samples = torch.cat([pos_samples_processed, neg_samples], 0)
@@ -421,12 +422,14 @@ class ObjectDetectionDataset(Dataset):
             return data, samples, target, label
 
 if __name__ == "__main__":
-    image_path = "/beegfs/jt3545/data/detection/train/image_tensor"
+    #image_path = "/beegfs/jt3545/data/detection/train/image_tensor"
+    image_path = "/beegfs/cy1355/camera_tensor_train/image_tensor"
     annotation_path = "/beegfs/cy1355/data/annotation.csv"
     #label_path =  "/beegfs/cy1355/obj_binary_roadmap_train/road_map"
 
     # train_loader = FrontObjectSegmentationDataset(image_path, label_path)
     # for data, label in iter(train_loader):
     #     assert (label.shape[0] == 400) & (label.shape[1] == 538)
-    train_loader = ObjectDetectionDataset(image_path,"/beegfs/cy1355/obj_binary_roadmap_train/road_map", annotation_path, True)
-    data = train_loader[150]
+    train_loader = CameraBasedObjectRegressionDataset(image_path,"/beegfs/cy1355/obj_binary_roadmap_train/road_map", annotation_path)
+    data = train_loader[1]
+    print(data[0].shape, data[1].shape, data[2].shape, data[3].shape)
