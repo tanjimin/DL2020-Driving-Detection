@@ -89,6 +89,16 @@ def train(epoch, batch_i, batch, param):
         outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1])
         if batch_i % 500 == 0:
             gen_bbox_heatmap_train(param, graph, camera_feature, epoch, batch_i)
+    elif param['run_name'] == 'bbox_reg_full':
+        camera_model = param['model'][0].train()
+        bbox_model = param['model'][1].train()
+        classifier = param['model'][2].train()
+        # inputs of shape batch * 6 * 256 * 16 * 20
+        camera_inputs = inputs.view(-1, 256, 16, 20)
+        camera_feature = camera_model(camera_inputs).unsqueeze(1)
+        bbox_feature = bbox_model(samples.view(-1, 8))
+        camera_feature_batch = camera_feature.repeat(1, samples.shape[1], 1)
+        outputs = classifier(camera_feature_batch.view(-1, 1024), bbox_feature).view(-1, samples.shape[1])
 
     elif param['run_name'] == 'camerabased_full':
         inputs = inputs.view(-1, 256, 16, 20)
