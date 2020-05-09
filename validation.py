@@ -20,7 +20,7 @@ def validation_loop(epoch, param):
 def validation(epoch, batch_i, batch, param):
     with torch.no_grad():
         outputs = None
-        if param['run_name'] != 'bbox_reg':
+        if not param['run_name'] in ['bbox_reg', 'bbox_reg_full']:
             inputs, labels = batch 
             inputs = inputs.to(param['device'])
             labels = labels.to(param['device'])

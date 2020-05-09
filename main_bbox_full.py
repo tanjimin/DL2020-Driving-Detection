@@ -6,7 +6,7 @@ import torchvision
 import itertools
 import torchvision.transforms as transforms
 from train import epoch_loop 
-from data import ObjectRegressionDataset
+from data import CameraBasedObjectRegressionDataset 
 from model import FrontDynamicModel, BoundingBoxEncoder, BoundingBoxClassifier
 from loss import focal_loss
 import pandas as pd
@@ -33,8 +33,7 @@ def init_loggers(param):
 
 
 def init_data(param):
-    trainset = ObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", 
-                                       "/beegfs/cy1355/obj_binary_roadmap_train/road_map",  "/beegfs/cy1355/data/annotation.csv", True)
+    trainset = CameraBasedObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_train/road_map",  "/beegfs/cy1355/data/annotation.csv")
     trainloader = torch.utils.data.DataLoader(trainset, 
                                               batch_size=4, 
                                               shuffle=True, 
@@ -43,8 +42,7 @@ def init_data(param):
 
     param['train_loader'] = trainloader
 
-    validationset = ObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", 
-                                            "/beegfs/cy1355/obj_binary_roadmap_val/road_map", "/beegfs/cy1355/data/annotation.csv", True)
+    validationset = CameraBasedObjectRegressionDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_val/road_map", "/beegfs/cy1355/data/annotation.csv")
     validationloader = torch.utils.data.DataLoader(validationset, 
                                               batch_size=32, 
                                               shuffle=True, 
