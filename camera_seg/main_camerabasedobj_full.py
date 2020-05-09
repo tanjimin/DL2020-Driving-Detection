@@ -1,0 +1,78 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+import torchvision
+import torchvision.transforms as transforms
+from trainobj import epoch_loop 
+from dataobj import CameraBasedObjectSegmentationDataset
+from modelobj import FrontStaticModel, UNet
+
+# Setting initial parameters for training
+def set_flags(param):
+    param['device'] = torch.device("cuda:0" if torch.cuda.is_available() 
+                                            else "cpu")
+    param['epochs'] = 5000
+    param['run_name'] = 'camerabased_full_obj'
+    
+
+def main():
+    param = {}
+    set_flags(param)
+    init_loggers(param)
+    init_data(param)
+    init_model(param)
+    init_optimizers(param)
+    epoch_loop(param)
+
+def init_loggers(param):
+    pass
+
+def init_data(param):
+    
+    batch_size_n = 64
+
+    trainset = LaneSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_train/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_train/road_map")
+    trainloader = torch.utils.data.DataLoader(trainset, 
+                                              batch_size = batch_size_n, 
+                                              shuffle=True, 
+                                              num_workers=0)
+    param['train_loader'] = trainloader
+
+    validationset = LaneSegmentationDataset("/beegfs/cy1355/obj_binary_roadmap_val/image_tensor", "/beegfs/cy1355/obj_binary_roadmap_val/road_map")
+    validationloader = torch.utils.data.DataLoader(validationset, 
+                                              batch_size = batch_size_n, 
+                                              shuffle=True, 
+                                              num_workers=0)
+    param['validation_loader'] = validationloader
+
+def init_model(param):
+    fusion = UNet(n_channels=1, n_classes=1, bilinear=True).to(param['device'])
+    model = FrontStaticModel().to(param['device'])
+    model = torch.load('./static_bbox_3050')
+
+    print('*** Model loads successfully ***')
+    
+    for param_ in model.parameters():
+        param_.requires_grad = False
+    
+    param['model'] = (model, fusion)
+
+def init_optimizers(param):
+    criterion = nn.BCELoss()
+
+    parameters = param['model'][0].parameters()
+    parameters_fusion = param['model'][1].parameters()
+
+    optimizer = optim.SGD(parameters, lr=0.0005, momentum=0.9)
+    optimizer_fusion = optim.SGD(parameters_fusion, lr=0.001, momentum=0.9)
+
+    param['criterion'] = criterion
+    param['optimizer'] = (optimizer, optimizer_fusion)
+    #param['optimizer'] = optimizer_fusion
+
+def init_distributed(param):
+    pass
+
+if __name__ == "__main__":
+    main()
