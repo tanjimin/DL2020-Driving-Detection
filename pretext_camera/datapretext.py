@@ -83,10 +83,9 @@ class UnlabeledJigsawDataset(torch.utils.data.Dataset):
 
 class CameraPretextDataset(torch.utils.data.Dataset):
     
-    def __init__(self, data_dir, label_dir):
+    def __init__(self, data_dir, scene_index):
         self.data_dir = data_dir
-        self.label_dir = label_dir
-        self.data_names = sorted(os.listdir(data_dir))
+        self.scene_index = scene_index
         self.normalize = torchvision.transforms.Normalize([0.485, 0.456, 0.406],[0.229, 0.224, 0.225])
 
     def __len__(self):
