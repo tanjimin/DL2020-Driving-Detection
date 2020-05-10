@@ -61,7 +61,7 @@ def init_data(param):
 
 def init_model(param):
     model = Network().to(param['device'])
-    model = torch.load('./jigsaw_models/epoch_16')
+    model = torch.load('./epoch_15')
     model = model.network()
     print('*** Load model successfully ***')
     for param_ in model.parameters():

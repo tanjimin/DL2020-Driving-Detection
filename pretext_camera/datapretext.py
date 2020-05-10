@@ -81,7 +81,7 @@ class UnlabeledJigsawDataset(torch.utils.data.Dataset):
         return {'original': image,'patches': samples, 'index' : index}
 
 
-class CameraPretextDataset(Dataset):
+class CameraPretextDataset(torch.utils.data.Dataset):
     
     def __init__(self, data_dir, label_dir):
         self.data_dir = data_dir
