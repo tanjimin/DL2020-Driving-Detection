@@ -61,7 +61,12 @@ def init_data(param):
 
 def init_model(param):
     model = Network().to(param['device'])
-    model = torch.load('./epoch_15')
+
+    model_dict = model.state_dict()
+    pretrained_dict = torch.load('./epoch_15')
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+    model_dict.update(pretrained_dict)
+    model.load_state_dict(model_dict)
     model = model.network()
     print('*** Load model successfully ***')
     for param_ in model.parameters():
